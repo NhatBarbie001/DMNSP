@@ -90,7 +90,7 @@ class ClassIncremental(nn.Module):
         # Fixed here
         if task_id == 0:
             class_names = []
-            for i in range(self.cfg.task_num):
+            for i in range(cfg.task_num):
                 class_names += get_class_names(self.classes_names, self.class_ids_per_task[i])
             self.all_class_names = class_names
             self.all_text_tokens = clip.tokenize(
