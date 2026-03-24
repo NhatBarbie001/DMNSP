@@ -70,7 +70,7 @@ def continual_clip(cfg: DictConfig) -> None:
             with torch.no_grad():
             # if cfg.visual_clsf:
                 a = 1
-                b = 4
+                b = 2
                 
                 outputs, image_feature, text_feature  = model.module.forward_for_extra_visual_clsf(inputs, 
                                                                                                 test=True, 
