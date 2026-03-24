@@ -88,7 +88,7 @@ class ClassIncremental(nn.Module):
             [self.prompt_template.format(c) for c in self.current_class_names]
         ).to(self.device)
         # Fixed here
-        if self.task_id == 0:
+        if task_id == 0:
             class_names = []
             for i in range(self.cfg.task_num):
                 class_names += get_class_names(self.classes_names, self.class_ids_per_task[i])
