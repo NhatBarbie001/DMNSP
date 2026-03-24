@@ -272,7 +272,7 @@ class ClassIncremental(nn.Module):
             optimizer.step()
 
         torch.cuda.empty_cache()
-
+        print(f"=================Training An extra visual_clsf (Task: {task_id})===========================")
         # fix here:============================================================================
                 # if cfg.visual_clsf:
             # pdb.set_trace()
