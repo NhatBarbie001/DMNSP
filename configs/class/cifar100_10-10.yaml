@@ -20,6 +20,7 @@ prompt_template: "a bad photo of a {}."
 batch_size: 64
 increment: ${initial_increment}
 initial_increment: 10  
+task_num: 10 
 scenario: "class"
 dataset: "cifar100"
 
