@@ -102,7 +102,7 @@ class ClassIncremental(nn.Module):
 
     # Fixed hereeeeeeeeeeeeee=======================================================
     def forward_clip(self, image, text, return_feature=False):
-        image_features = self.model.encode_image(image)
+        image_features, _ = self.model.encode_image(image)
         text_features, _ = self.model.encode_text(text)
 
         # normalized features
