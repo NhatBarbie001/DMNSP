@@ -67,8 +67,8 @@ class ClassIncremental(nn.Module):
         self.visual_U = {}
         self.loss_list = []
 
-        self.visual_clsf_epochs = 3
-        self.visual_clsf_batch_size = 64
+        self.visual_clsf_epochs = cfg.visual_clsf_epochs
+        self.visual_clsf_batch_size = cfg.visual_clsf_batch_size
         self.vision_clsf = None
         if cfg.model_name == "ViT-L/14":
             self.vision_clsf = VisionClassifier(768, cfg.increment, activation=None)
@@ -110,7 +110,7 @@ class ClassIncremental(nn.Module):
         text_features = text_features / text_features.norm(dim=1, keepdim=True)
 
         # cosine similarity as logits
-        logit_scale = self.logit_scale.exp()
+        logit_scale = self.model.logit_scale.exp()
         logits_per_image = logit_scale * image_features @ text_features.t()
         logits_per_text = logits_per_image.t()
 
@@ -144,8 +144,8 @@ class ClassIncremental(nn.Module):
             if replay is not None:
                 logits_per_image, _ = self.forward_clip(image, self.text_tokens)
                 # text_features_for_replay = self.model.encode_text(self.text_tokens[:-self.cfg.increment])
-                text_features_for_replay = self.model.encode_text(self.text_tokens)
-                text_features_for_replay = text_features_for_replay / text_features_for_replay.norm(dim=1, keepdim=True)
+                text_features_for_replay, _ = self.model.encode_text(self.text_tokens)
+                text_features_for_replay, _ = text_features_for_replay / text_features_for_replay.norm(dim=1, keepdim=True)
                 replay_features = replay / replay.norm(dim=1, keepdim=True)
                 replay_logits = replay_features @ text_features_for_replay.t() * 100
             else:
@@ -153,7 +153,7 @@ class ClassIncremental(nn.Module):
             probs = logits_per_image
                 
         if return_feature:
-            text_features = self.model.encode_text(self.all_text_tokens)
+            text_features, _ = self.model.encode_text(self.all_text_tokens)
             return probs, image_features, text_features
 
         if replay is not None:
@@ -164,7 +164,10 @@ class ClassIncremental(nn.Module):
         train_loader = DataLoader(train_dataset[task_id:task_id + 1],
                                   batch_size=cfg.batch_size,
                                   shuffle=True, num_workers=2)
-
+        if task_id == 0:
+            targets_bais = 0
+        else:
+            targets_bais = cfg.initial_increment + (task_id - 1) * cfg.increment
         train_iter = iter(train_loader)
         EPOCH = EPOCH_NUM
         num_batches = len(train_loader)
@@ -172,7 +175,7 @@ class ClassIncremental(nn.Module):
 
 
         for k, v in self.model.named_parameters():
-            if "adapt" not in k:
+            if "adapt" not in k :
                 v.requires_grad = False
 
         params = [
@@ -182,7 +185,7 @@ class ClassIncremental(nn.Module):
             k for k, v in self.model.named_parameters() if "adapt" in k
         ]
 
-        print('========trainable params============', params_name)
+        print('==================trainable params========================================', params_name)
         # optimizer
         optimizer = torch.optim.AdamW(params, lr=cfg.lr, weight_decay=cfg.weight_decay)
         scheduler = utils.cosine_lr(
@@ -313,7 +316,7 @@ class ClassIncremental(nn.Module):
                 # pdb.set_trace()
                 outputs = self.vision_clsf(outputs)
                 # pdb.set_trace()
-                loss = intra_cls(outputs,targets, self.targets_bais).mean()
+                loss = intra_cls(outputs,targets, targets_bais).mean()
                 # loss = F.cross_entropy(outputs, targets)
                 optimizer.zero_grad()
                 loss.backward()
