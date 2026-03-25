@@ -37,3 +37,5 @@ ls: 0.0
 visual_clsf_lr: 0.0005
 visual_clsf_batch_size: 64
 visual_clsf_epochs: 3
+a: 1
+b: 4

@@ -69,8 +69,8 @@ def continual_clip(cfg: DictConfig) -> None:
             # metric_logger.add([outputs.cpu().argmax(dim=1), targets.cpu(), task_ids], subset="test")
             with torch.no_grad():
             # if cfg.visual_clsf:
-                a = 1
-                b = 2
+                a = cfg.a
+                b = cfg.b
                 
                 outputs, image_feature, text_feature  = model.module.forward_for_extra_visual_clsf(inputs, 
                                                                                                 test=True, 
