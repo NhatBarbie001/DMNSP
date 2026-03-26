@@ -111,6 +111,9 @@ class Adapter(nn.Module):
         if self.adapter_layernorm_option == 'in': #  none
             x = self.adapter_layer_norm_before(x)
         # ------Fixed hereeee-------------------------------------------------------
+        down = self.down_proj(x)
+        down = self.non_linear_func(down)
+        down = nn.functional.dropout(down, p=self.dropout, training=self.training)
         if "text" in self.text_or_image:
             _cur_task = 0
             
@@ -118,9 +121,7 @@ class Adapter(nn.Module):
             up = linear(x, weight_delta_mlp)
             # weight_v = torch.stack([self.get_delta_w_v(t) for t in range(_cur_task+1)], dim=0).sum(dim=0)
         else:
-            down = self.down_proj(x)
-            down = self.non_linear_func(down)
-            down = nn.functional.dropout(down, p=self.dropout, training=self.training)
+            
             up = self.up_proj(down) #git push -u origin experiment_FFT_Coeficient_Parameter
 
         up = up * self.scale
