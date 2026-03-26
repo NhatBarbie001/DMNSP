@@ -88,7 +88,7 @@ class Adapter(nn.Module):
     
     # ⚠️ sửa select_pos để nhận generator
     def select_pos(self, t, dim, generator=None):
-        print(f"embed_dim:  {dim}")
+        print(f"n_embd:  {dim}")
         if generator is None:
             generator = torch.Generator(device=self.device).manual_seed(777 + t * 10)
 
@@ -99,7 +99,7 @@ class Adapter(nn.Module):
     def get_delta_mlp(self, task, alpha=3000):
         coef = self.coef_mlp[task]
         device = coef.device
-        F = torch.zeros(self.embed_dim, self.embed_dim).to(device)
+        F = torch.zeros(self.n_embd, self.n_embd).to(device)
         indices = self.indices[task]
         F[indices[0,:], indices[1,:]] =  self.coef_mlp[task]
 
