@@ -175,17 +175,17 @@ class ClassIncremental(nn.Module):
 
 
         for k, v in self.model.named_parameters():
-            if "adapt" not in k :
+            if "adapt" not in k or "coef" not in k:
                 v.requires_grad = False
 
-        params = [
-            v for k, v in self.model.named_parameters() if "adapt" in k
-        ]
-        params_name = [
-            k for k, v in self.model.named_parameters() if "adapt" in k
+        trainable_params = [
+            (k, v) for k, v in self.model.named_parameters() if "adapt" in k
         ]
 
-        print('==================trainable params========================================', params_name)
+        print("\n================== Trainable Parameters ====================")
+        for name, param in trainable_params:
+            print(f"{name:60} | shape={tuple(param.shape)} | requires_grad={param.requires_grad}")
+        print("==============================================================\n")
         # optimizer
         optimizer = torch.optim.AdamW(params, lr=cfg.lr, weight_decay=cfg.weight_decay)
         scheduler = utils.cosine_lr(
