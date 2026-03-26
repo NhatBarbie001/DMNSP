@@ -175,7 +175,7 @@ class ClassIncremental(nn.Module):
 
 
         for k, v in self.model.named_parameters():
-            if "adapt" not in k or "coef" not in k:
+            if "adapt" not in k and "coef" not in k:
                 v.requires_grad = False
 
         trainable_params = [
