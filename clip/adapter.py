@@ -56,7 +56,7 @@ class Adapter(nn.Module):
         #=================FFT heree=============================
         #--------------FFT heree----------------
         self.text_or_image = text_or_image
-        self.n_frq = 3000
+        self.n_frq = 5000
 
         self.device = 0
         #Fix hard num tasks = 1
