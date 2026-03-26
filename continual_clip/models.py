@@ -183,11 +183,14 @@ class ClassIncremental(nn.Module):
         ]
 
         print("\n================== Trainable Parameters ====================")
-        trainable_params = sorted(trainable_params, key=lambda x: x[0])
+        # sort theo shape
+        trainable_params = sorted(trainable_params, key=lambda x: tuple(x[1].shape))
+
         for i, (name, param) in enumerate(trainable_params, 1):
             print(f"{i:3d}. {name:55} | shape={str(tuple(param.shape)):20} | grad={param.requires_grad}")
         print("==============================================================\n")
         # optimizer
+        params = [v for _, v in trainable_params]
         optimizer = torch.optim.AdamW(params, lr=cfg.lr, weight_decay=cfg.weight_decay)
         scheduler = utils.cosine_lr(
             optimizer, cfg.lr, 30, total_iterations
