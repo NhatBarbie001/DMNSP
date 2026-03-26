@@ -1,14 +1,14 @@
 hydra:
-  run:
-    dir: ./experiments/${scenario}/${dataset}_${initial_increment}-${increment}-${method}
-  job:
-    chdir: true
+run:
+  dir: ./experiments/${scenario}/${dataset}_${initial_increment}-${increment}-${method}
+job:
+  chdir: true
 
-  job_logging:
-    version: 1
-    formatters:
-      simple:
-        format: '%(message)s'
+job_logging:
+  version: 1
+  formatters:
+    simple:
+      format: '%(message)s'
 
 class_order: ""
 dataset_root: ""

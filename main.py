@@ -100,8 +100,9 @@ def continual_clip(cfg: DictConfig) -> None:
         with open(cfg.log_path, 'a+') as f:
             f.write(json.dumps({
                 'task': task_id,
-                'acc': round(100 * metric_logger.accuracy, 2),
                 'avg_acc': round(100 * metric_logger.average_incremental_accuracy, 2),
+                'acc': round(100 * metric_logger.accuracy, 2),
+                
                 'forgetting': round(100 * metric_logger.forgetting, 6),
                 'acc_per_task': [round(100 * acc_t, 2) for acc_t in metric_logger.accuracy_per_task],
                 'bwt': round(100 * metric_logger.backward_transfer, 2),
