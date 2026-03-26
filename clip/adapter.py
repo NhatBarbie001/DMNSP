@@ -81,8 +81,6 @@ class Adapter(nn.Module):
         ]
         self.init_param()
         #---------------------------------------
-
-        self._reset_parameters()
         #================================================================
     def init_param(self):
         for t in range(len(self.coef_mlp)):
@@ -123,7 +121,7 @@ class Adapter(nn.Module):
             down = self.down_proj(x)
             down = self.non_linear_func(down)
             down = nn.functional.dropout(down, p=self.dropout, training=self.training)
-            up = self.up_proj(down)
+            up = self.up_proj(down) #git push -u origin experiment_FFT_Coeficient_Parameter
 
         up = up * self.scale
 
