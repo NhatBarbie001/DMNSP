@@ -56,7 +56,7 @@ class Adapter(nn.Module):
         #=================FFT heree=============================
         #--------------FFT heree----------------
         self.text_or_image = text_or_image
-        self.n_frq = 5000
+        self.n_frq = 3000
 
         self.device = 0
         #Fix hard num tasks = 1
@@ -96,7 +96,7 @@ class Adapter(nn.Module):
         indices = torch.stack([indices // dim, indices % dim], dim=0)
         return indices
 
-    def get_delta_mlp(self, task, alpha=3000):
+    def get_delta_mlp(self, task, alpha=1000):
         coef = self.coef_mlp[task]
         device = coef.device
         F = torch.zeros(self.n_embd, self.n_embd).to(device)
