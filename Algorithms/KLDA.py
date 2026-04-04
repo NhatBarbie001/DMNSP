@@ -154,7 +154,9 @@ class KLDA_E:
         print(f"total_probabilities shape: {total_probabilities.shape}")
         for model in self.models:
             logits = model.get_logits(x)
+            print(f"logits shape: {logits.shape}")
             probs = torch.softmax(logits, dim=0)
+            print(f"probs shape: {probs.shape}")
             total_probabilities += probs
 
         predicted_class = torch.argmax(total_probabilities).item()
