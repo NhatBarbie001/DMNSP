@@ -78,6 +78,7 @@ class ClassIncremental(nn.Module):
         self.klda_model = None 
         
         d= 512
+        self.num_classes = 100 # change it later, here is cifar
         self.klda_model = KLDA_E(
             num_classes=self.num_classes,
             d=d,
