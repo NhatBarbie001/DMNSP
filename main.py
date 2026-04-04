@@ -57,7 +57,7 @@ def continual_clip(cfg: DictConfig) -> None:
 
         model.module.adaptation(task_id, cfg, train_dataset, train_classes_names, world)  # task id 已经传入mode
         eval_sampler = DistributedSampler(eval_dataset[:task_id + 1], num_replicas=world, rank=0)
-        eval_loader = DataLoader(eval_dataset[:task_id + 1], batch_size=64, sampler=eval_sampler, num_workers=0)
+        eval_loader = DataLoader(eval_dataset[:task_id + 1], batch_size=1, sampler=eval_sampler, num_workers=0)
         
         
         
