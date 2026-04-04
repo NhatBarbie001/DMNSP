@@ -76,6 +76,7 @@ def continual_clip(cfg: DictConfig) -> None:
                                                                                                 test=True, 
                                                                                                 # all_test=cfg.all_test, 
                                                                                                 return_feature=True)
+                image_feature = image_feature.squeeze(0)
                 vision_outputs = model.module.klda_model.predict(image_feature)
 
                 # số class hiện tại
