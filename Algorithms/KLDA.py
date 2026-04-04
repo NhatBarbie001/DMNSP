@@ -102,6 +102,7 @@ class KLDA:
         # Mahalanobis distance is used here instead of the original LDA because it provides a more intuitive
         # measure of distance. Under reasonable assumptions, Mahalanobis distance can be proven to be equivalent to LDA.
         logits = -torch.sum((diff @ self.sigma_inv) * diff, dim=1)  # Shape: (num_classes,)
+        print(f"logits shape: {logits.shape}")
         return logits
 
 class KLDA_E:
@@ -150,7 +151,7 @@ class KLDA_E:
             int: Predicted class label.
         """
         total_probabilities = torch.zeros(self.models[0].num_classes, device=self.device)
-
+        print(f"total_probabilities shape: {total_probabilities.shape}")
         for model in self.models:
             logits = model.get_logits(x)
             probs = torch.softmax(logits, dim=0)
