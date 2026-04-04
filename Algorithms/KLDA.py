@@ -86,23 +86,23 @@ class KLDA:
         # phi_x = self._compute_rff(x.unsqueeze(0))  # Shape: (1, D)
         # diff = self.class_mean_matrix - phi_x      # Shape: (num_classes, D)
         x = x.to(self.device)
-        print(f"x shape: {x.shape}")
+        # print(f"x shape: {x.shape}")
 
         x_unsqueezed = x.unsqueeze(0)
-        print(f"x_unsqueezed shape: {x_unsqueezed.shape}")
+        # print(f"x_unsqueezed shape: {x_unsqueezed.shape}")
 
         phi_x = self._compute_rff(x_unsqueezed)  # Shape: (1, D)
-        print(f"phi_x shape: {phi_x.shape}")
+        # print(f"phi_x shape: {phi_x.shape}")
 
-        print(f"class_mean_matrix shape: {self.class_mean_matrix.shape}")
+        # print(f"class_mean_matrix shape: {self.class_mean_matrix.shape}")
 
         diff = self.class_mean_matrix - phi_x
-        print(f"diff shape: {diff.shape}")
+        # print(f"diff shape: {diff.shape}")
         # Note:
         # Mahalanobis distance is used here instead of the original LDA because it provides a more intuitive
         # measure of distance. Under reasonable assumptions, Mahalanobis distance can be proven to be equivalent to LDA.
         logits = -torch.sum((diff @ self.sigma_inv) * diff, dim=1)  # Shape: (num_classes,)
-        print(f"logits shape: {logits.shape}")
+        # print(f"logits shape: {logits.shape}")
         return logits
 
 class KLDA_E:
@@ -151,12 +151,12 @@ class KLDA_E:
             int: Predicted class label.
         """
         total_probabilities = torch.zeros(self.models[0].num_classes, device=self.device)
-        print(f"total_probabilities shape: {total_probabilities.shape}")
+        # print(f"total_probabilities shape: {total_probabilities.shape}")
         for model in self.models:
             logits = model.get_logits(x)
-            print(f"logits shape: {logits.shape}")
+            # print(f"logits shape: {logits.shape}")
             probs = torch.softmax(logits, dim=0)
-            print(f"probs shape: {probs.shape}")
+            # print(f"probs shape: {probs.shape}")
             total_probabilities += probs
         return total_probabilities
         # predicted_class = torch.argmax(total_probabilities).item()
