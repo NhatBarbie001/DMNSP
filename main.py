@@ -87,7 +87,7 @@ def continual_clip(cfg: DictConfig) -> None:
 
                 # softmax lại sau khi cắt
                 outputs_softmax = F.softmax(outputs, dim=1)
-                vision_outputs_softmax = F.softmax(vision_outputs, dim=1)
+                vision_outputs_softmax = F.softmax(vision_outputs, dim=0)
 
                 # combine
                 combined_outputs = (a * outputs_softmax + b * vision_outputs_softmax) / (a + b)
