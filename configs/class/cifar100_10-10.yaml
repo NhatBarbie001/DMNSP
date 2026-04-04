@@ -39,3 +39,10 @@ visual_clsf_batch_size: 64
 visual_clsf_epochs: 3
 a: 1
 b: 4
+
+
+
+D: 5000
+sigma: 1.0
+num_ensembles: 5
+seed: 11

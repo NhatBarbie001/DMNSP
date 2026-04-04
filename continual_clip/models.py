@@ -9,6 +9,7 @@ from torch.utils.data import DataLoader
 from .utils import get_class_ids_per_task, get_class_names
 from . import utils
 from .dynamic_dataset import DynamicDataset
+from Algorithms.KLDA import KLDA_E
 
 DEFAULT_THRESHOLD = 0.985
 TOP_SELECT = 1
@@ -74,6 +75,18 @@ class ClassIncremental(nn.Module):
             self.vision_clsf = VisionClassifier(768, cfg.increment, activation=None)
         else:
             self.vision_clsf = VisionClassifier(512, cfg.increment, activation=None)
+        self.klda_model = None 
+        
+        d= 512
+        self.klda_model = KLDA_E(
+            num_classes=self.num_classes,
+            d=d,
+            D=cfg.D,
+            sigma=cfg.sigma,
+            num_ensembles=cfg.num_ensembles,
+            seed=cfg.seed,
+            device=self.device
+        )
 
 
     def forward(self, image, taskid):
@@ -273,58 +286,122 @@ class ClassIncremental(nn.Module):
 
         torch.cuda.empty_cache()
         print(f"=================Training An extra visual_clsf (Task: {task_id})===========================")
-        # fix here:============================================================================
-                # if cfg.visual_clsf:
-            # pdb.set_trace()
-        torch.cuda.empty_cache()
-        self.model.eval()
-        e_num = self.visual_clsf_epochs
+
+        # KLDA models:===========================================================================
         vision_clsf_loader = DataLoader(train_dataset[task_id:task_id + 1], 
                                         batch_size=self.visual_clsf_batch_size, 
                                         shuffle=True, num_workers=2)
-        features_dict = {}
-        with torch.no_grad():
-            for inputs, targets, t in vision_clsf_loader:
-                inputs, targets = inputs.to(self.device), targets.to(self.device)
-                _, features, __ = self.forward_for_extra_visual_clsf(inputs, test=True, return_feature=True)
-                for feature, target in zip(features, targets):
-                    target = target.item()
-                    if target not in features_dict:
-                        features_dict[target] = []
-                    features_dict[target].append(feature.cpu())
-        mean_features = []
-        for target in sorted(features_dict.keys()):
-            features = torch.stack(features_dict[target])
-            mean_feature = features.mean(dim=0)
-            mean_features.append(mean_feature.unsqueeze(0))
-        mean_features = torch.cat(mean_features).to(self.device)
-        if task_id > 0:
-            self.vision_clsf.add_weight(mean_features)
-            pass
-        else:
-            self.vision_clsf.set_weight(mean_features)
-            pass
-        optimizer = torch.optim.Adam(self.vision_clsf.parameters(), lr=cfg.visual_clsf_lr)
-        scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, e_num*len(vision_clsf_loader), eta_min=cfg.visual_clsf_lr*0.01)
-        for e in range(e_num):
-            bach_i = -1
-            for inputs, targets, t in vision_clsf_loader:
-                inputs, targets = inputs.to(self.device), targets.to(self.device)
-                # pdb.set_trace()
-                with torch.no_grad():
-                    outputs, _ = self.forward_for_extra_visual_clsf(inputs, return_feature=True)
-                # pdb.set_trace()
-                outputs = self.vision_clsf(outputs)
-                # pdb.set_trace()
-                loss = intra_cls(outputs,targets, targets_bais).mean()
-                # loss = F.cross_entropy(outputs, targets)
-                optimizer.zero_grad()
-                loss.backward()
-                optimizer.step()
-                bach_i+=1
-                if bach_i % 10 == 0:
-                    logging.info(f"Epoch {e + 1}/{e_num} | Batch {bach_i + 1}/{len(vision_clsf_loader)} | Loss: {loss.item()}")
-                scheduler.step()
+        #  ===== Step 1: collect feature theo class =====
+        class_features = {}
+
+        for inputs, targets, t in vision_clsf_loader:
+            inputs = inputs.to(self.device)
+            targets = targets.to(self.device)
+
+            with torch.no_grad():
+                features, _ = self.forward_for_extra_visual_clsf(
+                    inputs, return_feature=True
+                )
+
+            # normalize giống classifier cũ
+            features = F.normalize(features, dim=-1)
+
+            # group theo class
+            for cls in torch.unique(targets):
+                cls = cls.item()
+                mask = targets == cls
+                feat_cls = features[mask]
+
+                if cls not in class_features:
+                    class_features[cls] = []
+
+                class_features[cls].append(feat_cls)
+        # ===== Step 2: merge tất cả batch =====
+        self.labels = sorted(class_features.keys())
+        num_classes = len(self.labels)
+
+        print(f"[KLDA] Num classes: {num_classes}")
+
+        # concat feature theo từng class
+        class_features = {
+            cls: torch.cat(feats, dim=0)
+            for cls, feats in class_features.items()
+        }
+
+        # ===== Step 3: init KLDA =====
+        # d = list(class_features.values())[0].shape[1] # embedding dimension of the visual features (512)
+        # self.klda_model = KLDA_E(
+        #     num_classes=num_classes,
+        #     d=d,
+        #     D=self.D,
+        #     sigma=self.sigma,
+        #     num_ensembles=self.num_ensembles,
+        #     seed=self.seed,
+        #     device=self.device
+        # )
+        # ===== Step 4: update model =====
+        for idx, cls in enumerate(self.labels):
+            feats = class_features[cls]   # [N_cls, d]
+
+            self.klda_model.batch_update(feats, idx)
+
+        # ===== Step 5: finalize =====
+        self.klda_model.fit()
+        print("============== [KLDA] Training done. =========================================")
+
+        #========================================================================================
+        # # fix here:============================================================================
+                # if cfg.visual_clsf:
+            # pdb.set_trace()
+        # torch.cuda.empty_cache()
+        # self.model.eval()
+        # e_num = self.visual_clsf_epochs
+        # vision_clsf_loader = DataLoader(train_dataset[task_id:task_id + 1], 
+        #                                 batch_size=self.visual_clsf_batch_size, 
+        #                                 shuffle=True, num_workers=2)
+        # features_dict = {}
+        # with torch.no_grad():
+        #     for inputs, targets, t in vision_clsf_loader:
+        #         inputs, targets = inputs.to(self.device), targets.to(self.device)
+        #         _, features, __ = self.forward_for_extra_visual_clsf(inputs, test=True, return_feature=True)
+        #         for feature, target in zip(features, targets):
+        #             target = target.item()
+        #             if target not in features_dict:
+        #                 features_dict[target] = []
+        #             features_dict[target].append(feature.cpu())
+        # mean_features = []
+        # for target in sorted(features_dict.keys()):
+        #     features = torch.stack(features_dict[target])
+        #     mean_feature = features.mean(dim=0)
+        #     mean_features.append(mean_feature.unsqueeze(0))
+        # mean_features = torch.cat(mean_features).to(self.device)
+        # if task_id > 0:
+        #     self.vision_clsf.add_weight(mean_features)
+        #     pass
+        # else:
+        #     self.vision_clsf.set_weight(mean_features)
+        #     pass
+        # optimizer = torch.optim.Adam(self.vision_clsf.parameters(), lr=cfg.visual_clsf_lr)
+        # scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, e_num*len(vision_clsf_loader), eta_min=cfg.visual_clsf_lr*0.01)
+        # for e in range(e_num):
+        #     bach_i = -1
+        #     for inputs, targets, t in vision_clsf_loader:
+        #         inputs, targets = inputs.to(self.device), targets.to(self.device)
+        #         # pdb.set_trace()
+        #         with torch.no_grad():
+        #             outputs, _ = self.forward_for_extra_visual_clsf(inputs, return_feature=True)
+        #         # pdb.set_trace()
+        #         outputs = self.vision_clsf(outputs)
+        #         # pdb.set_trace()
+        #         loss = intra_cls(outputs,targets, targets_bais).mean()
+        #         # loss = F.cross_entropy(outputs, targets)
+        #         optimizer.zero_grad()
+        #         loss.backward()
+        #         optimizer.step()
+        #         bach_i+=1
+        #         if bach_i % 10 == 0:
+        #             logging.info(f"Epoch {e + 1}/{e_num} | Batch {bach_i + 1}/{len(vision_clsf_loader)} | Loss: {loss.item()}")
+        #         scheduler.step()
         #======================================================================================
         train_loader_ = DataLoader(train_dataset[task_id:task_id + 1],
                                   batch_size=128,

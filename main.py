@@ -76,7 +76,7 @@ def continual_clip(cfg: DictConfig) -> None:
                                                                                                 test=True, 
                                                                                                 # all_test=cfg.all_test, 
                                                                                                 return_feature=True)
-                vision_outputs = model.module.vision_clsf(image_feature)
+                vision_outputs = model.module.klda_model.predict(image_feature)
 
                 outputs_softmax = F.softmax(outputs, dim=1)
                 vision_outputs_softmax = F.softmax(vision_outputs, dim=1)
