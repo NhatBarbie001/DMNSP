@@ -77,17 +77,17 @@ class ClassIncremental(nn.Module):
             self.vision_clsf = VisionClassifier(512, cfg.increment, activation=None)
         self.klda_model = None 
         
-        # d= 512
-        # self.num_classes = 100 # change it later, here is cifar
-        # self.klda_model = KLDA_E(
-        #     num_classes=self.num_classes,
-        #     d=d,
-        #     D=cfg.D,
-        #     sigma=cfg.sigma,
-        #     num_ensembles=cfg.num_ensembles,
-        #     seed=cfg.seed,
-        #     device=self.device
-        # )
+        d= 512
+        self.num_classes = 100 # change it later, here is cifar
+        self.klda_model = KLDA_E(
+            num_classes=self.num_classes,
+            d=d,
+            D=cfg.D,
+            sigma=cfg.sigma,
+            num_ensembles=cfg.num_ensembles,
+            seed=cfg.seed,
+            device=self.device
+        )
 
 
     def forward(self, image, taskid):
@@ -331,18 +331,18 @@ class ClassIncremental(nn.Module):
         }
 
         # ===== Step 3: init KLDA =====
-        cur_num_classes = (task_id + 1) * cfg.increment
-        d= 512
-        # self.num_classes = 100 # change it later, here is cifar
-        self.klda_model = KLDA_E(
-            num_classes=cur_num_classes,
-            d=d,
-            D=cfg.D,
-            sigma=cfg.sigma,
-            num_ensembles=cfg.num_ensembles,
-            seed=cfg.seed,
-            device=self.device
-        )
+        # cur_num_classes = (task_id + 1) * cfg.increment
+        # d= 512
+        # # self.num_classes = 100 # change it later, here is cifar
+        # self.klda_model = KLDA_E(
+        #     num_classes=cur_num_classes,
+        #     d=d,
+        #     D=cfg.D,
+        #     sigma=cfg.sigma,
+        #     num_ensembles=cfg.num_ensembles,
+        #     seed=cfg.seed,
+        #     device=self.device
+        # )
         # ===== Step 4: update model =====
         for idx, cls in enumerate(self.labels):
             feats = class_features[cls]   # [N_cls, d]
