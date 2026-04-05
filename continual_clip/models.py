@@ -77,17 +77,17 @@ class ClassIncremental(nn.Module):
             self.vision_clsf = VisionClassifier(512, cfg.increment, activation=None)
         self.klda_model = None 
         
-        d= 512
-        self.num_classes = 100 # change it later, here is cifar
-        self.klda_model = KLDA_E(
-            num_classes=self.num_classes,
-            d=d,
-            D=cfg.D,
-            sigma=cfg.sigma,
-            num_ensembles=cfg.num_ensembles,
-            seed=cfg.seed,
-            device=self.device
-        )
+        # d= 512
+        # self.num_classes = 100 # change it later, here is cifar
+        # self.klda_model = KLDA_E(
+        #     num_classes=self.num_classes,
+        #     d=d,
+        #     D=cfg.D,
+        #     sigma=cfg.sigma,
+        #     num_ensembles=cfg.num_ensembles,
+        #     seed=cfg.seed,
+        #     device=self.device
+        # )
 
 
     def forward(self, image, taskid):
@@ -289,6 +289,7 @@ class ClassIncremental(nn.Module):
         print(f"=================Training An extra visual_clsf (Task: {task_id})===========================")
 
         # KLDA models:===========================================================================
+        
         vision_clsf_loader = DataLoader(train_dataset[task_id:task_id + 1], 
                                         batch_size=self.visual_clsf_batch_size, 
                                         shuffle=True, num_workers=2)
@@ -330,16 +331,18 @@ class ClassIncremental(nn.Module):
         }
 
         # ===== Step 3: init KLDA =====
-        # d = list(class_features.values())[0].shape[1] # embedding dimension of the visual features (512)
-        # self.klda_model = KLDA_E(
-        #     num_classes=num_classes,
-        #     d=d,
-        #     D=self.D,
-        #     sigma=self.sigma,
-        #     num_ensembles=self.num_ensembles,
-        #     seed=self.seed,
-        #     device=self.device
-        # )
+        cur_num_classes = (task_id + 1) * cfg.increment
+        d= 512
+        # self.num_classes = 100 # change it later, here is cifar
+        self.klda_model = KLDA_E(
+            num_classes=cur_num_classes,
+            d=d,
+            D=cfg.D,
+            sigma=cfg.sigma,
+            num_ensembles=cfg.num_ensembles,
+            seed=cfg.seed,
+            device=self.device
+        )
         # ===== Step 4: update model =====
         for idx, cls in enumerate(self.labels):
             feats = class_features[cls]   # [N_cls, d]

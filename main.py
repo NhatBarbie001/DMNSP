@@ -80,10 +80,10 @@ def continual_clip(cfg: DictConfig) -> None:
                 vision_outputs = model.module.klda_model.predict(image_feature)
 
                 # số class hiện tại
-                num_current_classes = (task_id + 1) * cfg.initial_increment
+                # num_current_classes = (task_id + 1) * cfg.initial_increment
 
                 # cắt vision logits
-                vision_outputs = vision_outputs[ :num_current_classes]
+                # vision_outputs = vision_outputs[ :num_current_classes]
 
                 # softmax lại sau khi cắt
                 outputs_softmax = F.softmax(outputs, dim=1)
