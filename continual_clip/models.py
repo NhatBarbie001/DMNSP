@@ -16,6 +16,8 @@ EPOCH_NUM = 4
 TOP_K_RATIO = 0.1
 LAMBDA_SCALE = 30
 LAYER_NUM = 12
+# tqdm: percent + bar + n/total only (no ETA / rate suffix)
+_TQDM_BAR_FMT = "{l_bar}{bar}| {n_fmt}/{total_fmt}"
 
 def intra_cls(logits, y, classes):
     y = y - classes
@@ -213,6 +215,8 @@ class ClassIncremental(nn.Module):
             desc=f"Task {task_id} | CLIP adapt",
             disable=disable_pbar,
             unit="step",
+            bar_format=_TQDM_BAR_FMT,
+            dynamic_ncols=True,
         ):
             scheduler(iteration)
             try:
@@ -236,7 +240,6 @@ class ClassIncremental(nn.Module):
 
             loss = F.cross_entropy(logits_per_image, targets, label_smoothing=cfg.ls)
             self.loss_list.append(loss)
-            print('CELoss: {}'.format(loss))
             optimizer.zero_grad()
             loss.backward()
 
@@ -299,6 +302,8 @@ class ClassIncremental(nn.Module):
                 desc=f"Task {task_id} | collect features",
                 disable=disable_pbar,
                 unit="batch",
+                bar_format=_TQDM_BAR_FMT,
+                dynamic_ncols=True,
             ):
                 inputs, targets = inputs.to(self.device), targets.to(self.device)
                 _, features, __ = self.forward_for_extra_visual_clsf(inputs, test=True, return_feature=True)
@@ -328,6 +333,8 @@ class ClassIncremental(nn.Module):
             desc=f"Task {task_id} | visual clf",
             disable=disable_pbar,
             unit="batch",
+            bar_format=_TQDM_BAR_FMT,
+            dynamic_ncols=True,
         ) as pbar_vc:
             for e in range(e_num):
                 bach_i = -1
@@ -361,6 +368,8 @@ class ClassIncremental(nn.Module):
             desc=f"Task {task_id} | SVD / U update",
             disable=disable_pbar,
             unit="batch",
+            bar_format=_TQDM_BAR_FMT,
+            dynamic_ncols=True,
         ):
             inputs = inputs.to(self.device)
 
