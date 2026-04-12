@@ -172,7 +172,11 @@ class ClassIncremental(nn.Module):
         EPOCH = EPOCH_NUM
         num_batches = len(train_loader)
         total_iterations = EPOCH * num_batches
+        show_progress = True #cfg.get("show_progress", True)
+        disable_pbar = not show_progress
+        task_subset = train_dataset[task_id:task_id + 1]
 
+        print(f"\n========== Task {task_id} ==========\n")
 
         for k, v in self.model.named_parameters():
             if "adapt" not in k :
@@ -204,7 +208,12 @@ class ClassIncremental(nn.Module):
 
         batch_count = 0
         lamda = [[0 for _ in range(LAYER_NUM)] for _ in range(LAYER_NUM)]
-        for iteration in tqdm(range(total_iterations + 1)):
+        for iteration in tqdm(
+            range(total_iterations + 1),
+            desc=f"Task {task_id} | CLIP adapt",
+            disable=disable_pbar,
+            unit="step",
+        ):
             scheduler(iteration)
             try:
                 inputs, targets, task_ids = next(train_iter)
@@ -272,19 +281,25 @@ class ClassIncremental(nn.Module):
             optimizer.step()
 
         torch.cuda.empty_cache()
-        print(f"=================Training An extra visual_clsf (Task: {task_id})===========================")
         # fix here:============================================================================
                 # if cfg.visual_clsf:
             # pdb.set_trace()
         torch.cuda.empty_cache()
         self.model.eval()
-        e_num = self.visual_clsf_epochs
-        vision_clsf_loader = DataLoader(train_dataset[task_id:task_id + 1], 
-                                        batch_size=self.visual_clsf_batch_size, 
-                                        shuffle=True, num_workers=2)
+        vision_clsf_loader = DataLoader(
+            task_subset,
+            batch_size=self.visual_clsf_batch_size,
+            shuffle=True,
+            num_workers=2,
+        )
         features_dict = {}
         with torch.no_grad():
-            for inputs, targets, t in vision_clsf_loader:
+            for inputs, targets, t in tqdm(
+                vision_clsf_loader,
+                desc=f"Task {task_id} | collect features",
+                disable=disable_pbar,
+                unit="batch",
+            ):
                 inputs, targets = inputs.to(self.device), targets.to(self.device)
                 _, features, __ = self.forward_for_extra_visual_clsf(inputs, test=True, return_feature=True)
                 for feature, target in zip(features, targets):
@@ -304,34 +319,49 @@ class ClassIncremental(nn.Module):
         else:
             self.vision_clsf.set_weight(mean_features)
             pass
+        e_num = self.visual_clsf_epochs
         optimizer = torch.optim.Adam(self.vision_clsf.parameters(), lr=cfg.visual_clsf_lr)
         scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, e_num*len(vision_clsf_loader), eta_min=cfg.visual_clsf_lr*0.01)
-        for e in range(e_num):
-            bach_i = -1
-            for inputs, targets, t in vision_clsf_loader:
-                inputs, targets = inputs.to(self.device), targets.to(self.device)
-                # pdb.set_trace()
-                with torch.no_grad():
-                    outputs, _ = self.forward_for_extra_visual_clsf(inputs, return_feature=True)
-                # pdb.set_trace()
-                outputs = self.vision_clsf(outputs)
-                # pdb.set_trace()
-                loss = intra_cls(outputs,targets, targets_bais).mean()
-                # loss = F.cross_entropy(outputs, targets)
-                optimizer.zero_grad()
-                loss.backward()
-                optimizer.step()
-                bach_i+=1
-                if bach_i % 10 == 0:
-                    logging.info(f"Epoch {e + 1}/{e_num} | Batch {bach_i + 1}/{len(vision_clsf_loader)} | Loss: {loss.item()}")
-                scheduler.step()
+        total_vc_batches = e_num * len(vision_clsf_loader)
+        with tqdm(
+            total=total_vc_batches,
+            desc=f"Task {task_id} | visual clf",
+            disable=disable_pbar,
+            unit="batch",
+        ) as pbar_vc:
+            for e in range(e_num):
+                bach_i = -1
+                for inputs, targets, t in vision_clsf_loader:
+                    inputs, targets = inputs.to(self.device), targets.to(self.device)
+                    # pdb.set_trace()
+                    with torch.no_grad():
+                        outputs, _ = self.forward_for_extra_visual_clsf(inputs, return_feature=True)
+                    # pdb.set_trace()
+                    outputs = self.vision_clsf(outputs)
+                    # pdb.set_trace()
+                    loss = intra_cls(outputs,targets, targets_bais).mean()
+                    # loss = F.cross_entropy(outputs, targets)
+                    optimizer.zero_grad()
+                    loss.backward()
+                    optimizer.step()
+                    bach_i+=1
+                    if bach_i % 10 == 0:
+                        logging.info(f"Epoch {e + 1}/{e_num} | Batch {bach_i + 1}/{len(vision_clsf_loader)} | Loss: {loss.item()}")
+                    scheduler.step()
+                    pbar_vc.update(1)
         #======================================================================================
         train_loader_ = DataLoader(train_dataset[task_id:task_id + 1],
                                   batch_size=128,
                                   shuffle=True, num_workers=2)
         counts = 0
         models = self.model.to(self.device)
-        for inputs, targets, task_ids in tqdm(train_loader_):
+        for inputs, targets, task_ids in tqdm(
+            train_loader_,
+            total=1,
+            desc=f"Task {task_id} | SVD / U update",
+            disable=disable_pbar,
+            unit="batch",
+        ):
             inputs = inputs.to(self.device)
 
             with torch.no_grad():
