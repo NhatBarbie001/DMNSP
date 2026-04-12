@@ -74,6 +74,13 @@ def get_dataset(cfg, is_train, transforms=None):
             # transforms=transforms
         )
         classes_names = dataset.dataset.classes
+    elif cfg.dataset == "imagenetR":
+        data_path = cfg.dataset_root
+        dataset = ImageNet_R(
+            data_path, 
+            train=is_train
+        )
+        classes_names = get_dataset_class_names(cfg.workdir, cfg.dataset)
 
     # elif cfg.dataset == "tiny-imagenet-200":
     elif cfg.dataset == "tinyimagenet":
