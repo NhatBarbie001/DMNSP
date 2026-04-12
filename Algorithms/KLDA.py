@@ -1,163 +1,104 @@
+# %load /kaggle/working/DMNSP/main.py
+import os
+import json
+import random
+
+import hydra
+import logging
+import numpy as np
+from omegaconf import DictConfig
+from tqdm import tqdm
 import torch
-from collections import defaultdict
+import statistics
+from continuum.metrics import Logger
+from continual_clip import utils
+from continual_clip.models import load_model
+from continual_clip.datasets import build_cl_scenarios
+from torch.utils.data import DataLoader, DistributedSampler
 
-class KLDA:
-    def __init__(self, num_classes, d, D, sigma, seed, device):
-        """
-        Args:
-            num_classes (int): Total number of classes.
-            d (int): Input feature dimension.
-            D (int): RFF dimension.
-            sigma (float): Bandwidth parameter for RBF kernel.
-            seed (int): Seed for RFF initialization to ensure different transformations.
-            device (torch.device): Device to run the models on.
-        """
-        self.num_classes = num_classes
-        self.d = d
-        self.D = D
-        self.sigma = sigma
-        self.seed = seed
-        self.device = device
+WORLD_NUM = 1
+@hydra.main(config_path=None, config_name=None, version_base="1.1")
+def continual_clip(cfg: DictConfig) -> None:
 
-        torch.manual_seed(self.seed)
-        self.omega = torch.normal(
-            0, 
-            torch.sqrt(torch.tensor(2 * self.sigma, dtype=torch.float32)),
-            (self.d, self.D)
-        ).to(self.device)
-        self.b = (torch.rand(self.D) * 2 * torch.pi).to(self.device)
+    set_seed(RANDOM_SEED)
 
-        self.class_means = defaultdict(lambda: torch.zeros(self.D, device=self.device))
-        self.class_counts = defaultdict(int)
+    cfg.workdir = "/***/DMNSP/cil"
+    cfg.dataset_root = os.path.join(cfg.workdir, cfg.dataset_root)
 
-        self.sigma = torch.zeros((self.D, self.D), device=self.device)
-        self.sigma_inv = None
-        self.class_mean_matrix = None
+    utils.save_config(cfg)
+    cfg.class_order = utils.get_class_order(os.path.join(cfg.workdir, cfg.class_order))
+    origin_flag = False
+    devices = [0]
+    model = load_model(cfg, devices[0], origin_flag)
 
-    def _compute_rff(self, X):
-        """
-        Computes the Random Fourier Features for input data X.
-        Args:
-            X (torch.Tensor): Input feature tensor of shape (n_samples, d).
-        Returns:
-            torch.Tensor: Transformed feature tensor of shape (n_samples, D).
-        """
-        scaling_factor = torch.sqrt(torch.tensor(2.0 / self.D, dtype=torch.float32, device=self.device))
-        return scaling_factor * torch.cos(X @ self.omega + self.b)
+    eval_dataset, classes_names = build_cl_scenarios(
+        cfg, is_train=False, transforms=model.transforms
+    )
+    print(eval_dataset, eval_dataset)
+    train_dataset, train_classes_names = build_cl_scenarios(
+        cfg, is_train=True, transforms=model.transforms
+    )
+    model.classes_names = classes_names
 
-    def batch_update(self, X, y):
-        """
-        Updates the model with a batch of data for a specific class.
-        Args:
-            X (torch.Tensor): Feature tensor of shape (n_samples, d).
-            y (int): Class label.
-        """
-        X = X.to(self.device)
-        n = X.size(0)
-        phi_X = self._compute_rff(X)  # Shape: (n, D)
-        phi_X_mean = torch.mean(phi_X, dim=0)
+    print("Using devices", devices)
+    model = torch.nn.DataParallel(model, device_ids=devices)
 
-        # Update class mean
-        previous_count = self.class_counts[y]
-        self.class_counts[y] += n
-        self.class_means[y] = (self.class_means[y] * previous_count + phi_X_mean * n) / self.class_counts[y]
+    with open(cfg.log_path, 'w+') as f:
+        pass
 
-        # Update covariance matrix sigma
-        centered_phi_X = phi_X - self.class_means[y]
-        self.sigma += centered_phi_X.t() @ centered_phi_X
+    acc_list = []
+    forgetting_list = []
+    metric_logger = Logger(list_subsets=["test"])
+    world = WORLD_NUM
 
-    def fit(self):
-        """
-        Finalizes the model by computing the inverse of the covariance matrix
-        and stacking class means into a matrix for efficient distance computation.
-        """
-        self.sigma_inv = torch.pinverse(self.sigma)
-        self.class_mean_matrix = torch.stack([self.class_means[i] for i in range(self.num_classes)]).to(self.device)
+    for task_id, _ in enumerate(eval_dataset):
 
-    def get_logits(self, x):
-        """
-        Computes the logits for all the classes.
-        Args:
-            x (torch.Tensor): Feature tensor of shape (d,).
-        Returns:
-            torch.Tensor: Logits for each class of shape (num_classes,).
-        """
-        # x = x.to(self.device)
-        # phi_x = self._compute_rff(x.unsqueeze(0))  # Shape: (1, D)
-        # diff = self.class_mean_matrix - phi_x      # Shape: (num_classes, D)
-        x = x.to(self.device)
-        # print(f"x shape: {x.shape}")
+        logging.info(f"Evaluation for task {task_id} has started.")
 
-        x_unsqueezed = x.unsqueeze(0)
-        # print(f"x_unsqueezed shape: {x_unsqueezed.shape}")
+        model.module.adaptation(task_id, cfg, train_dataset, train_classes_names, world)  # task id 已经传入mode
+        eval_sampler = DistributedSampler(eval_dataset[:task_id + 1], num_replicas=world, rank=0)
+        eval_loader = DataLoader(eval_dataset[:task_id + 1], batch_size=64, sampler=eval_sampler, num_workers=8)
 
-        phi_x = self._compute_rff(x_unsqueezed)  # Shape: (1, D)
-        # print(f"phi_x shape: {phi_x.shape}")
+        for inputs, targets, task_ids in tqdm(eval_loader):
+            inputs, targets = inputs.cuda(device=0), targets.cuda(device=0)
+            outputs = model.module.cuda(0)(inputs.cuda(0), task_ids)
+            metric_logger.add([outputs.cpu().argmax(dim=1), targets.cpu(), task_ids], subset="test")
 
-        # print(f"class_mean_matrix shape: {self.class_mean_matrix.shape}")
 
-        diff = self.class_mean_matrix - phi_x
-        # print(f"diff shape: {diff.shape}")
-        # Note:
-        # Mahalanobis distance is used here instead of the original LDA because it provides a more intuitive
-        # measure of distance. Under reasonable assumptions, Mahalanobis distance can be proven to be equivalent to LDA.
-        logits = -torch.sum((diff @ self.sigma_inv) * diff, dim=1)  # Shape: (num_classes,)
-        # print(f"logits shape: {logits.shape}")
-        return logits
+        acc_list.append(100 * metric_logger.accuracy)
+        forgetting_list.append(100 * metric_logger.forgetting)
 
-class KLDA_E:
-    def __init__(self, num_classes, d, D, sigma, num_ensembles, seed, device=None):
-        """
-        Args:
-            num_classes (int): Total number of classes.
-            d (int): Input feature dimension.
-            D (int): RFF dimension.
-            sigma (float): Bandwidth parameter for RBF kernel.
-            num_ensembles (int): Number of models in the ensemble.
-            seed (int): Base seed for reproducibility.
-            device (torch.device, optional): Device to run the models on. Defaults to CUDA if available.
-        """
-        if device is None:
-            device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-        self.num_ensembles = num_ensembles
-        self.device = device
-        self.models = [
-            KLDA(num_classes, d, D, sigma, seed=seed+i, device=self.device) for i in range(self.num_ensembles)
-        ]
+        with open(cfg.log_path, 'a+') as f:
+            f.write(json.dumps({
+                'task': task_id,
+                'acc': round(100 * metric_logger.accuracy, 2),
+                'avg_acc': round(100 * metric_logger.average_incremental_accuracy, 2),
+                'forgetting': round(100 * metric_logger.forgetting, 6),
+                'acc_per_task': [round(100 * acc_t, 2) for acc_t in metric_logger.accuracy_per_task],
+                'bwt': round(100 * metric_logger.backward_transfer, 2),
+                'fwt': round(100 * metric_logger.forward_transfer, 2),
+            }) + '\n')
+            metric_logger.end_task()
 
-    def batch_update(self, X, y):
-        """
-        Updates all models in the ensemble with the given batch of data.
-        Args:
-            X (torch.Tensor): Feature tensor of shape (n_samples, d).
-            y (int): Class label.
-        """
-        for model in self.models:
-            model.batch_update(X, y)
+    with open(cfg.log_path, 'a+') as f:
+        f.write(json.dumps({
+            'last_Cifar100': round(acc_list[-1], 2),
+            'avg_Cifar100': round(statistics.mean(acc_list), 2),
+            'avg_forgetting': round(statistics.mean(forgetting_list), 2)
+        }) + '\n')
 
-    def fit(self):
-        """
-        Finalizes all models in the ensemble by computing necessary matrices.
-        """
-        for model in self.models:
-            model.fit()
 
-    def predict(self, x):
-        """
-        Predicts the class label for a single instance by aggregating normalized probabilities from all ensemble members.
-        Args:
-            x (torch.Tensor): Feature tensor of shape (d,).
-        Returns:
-            int: Predicted class label.
-        """
-        total_probabilities = torch.zeros(self.models[0].num_classes, device=self.device)
-        # print(f"total_probabilities shape: {total_probabilities.shape}")
-        for model in self.models:
-            logits = model.get_logits(x)
-            # print(f"logits shape: {logits.shape}")
-            probs = torch.softmax(logits, dim=0)
-            # print(f"probs shape: {probs.shape}")
-            total_probabilities += probs
-        return total_probabilities
-        # predicted_class = torch.argmax(total_probabilities).item()
-        # return predicted_class
+RANDOM_SEED = 32
+
+def set_seed(seed):
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
+    os.environ['PYTHONHASHSEED'] = str(seed)
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
+
+if __name__ == "__main__":
+    continual_clip()

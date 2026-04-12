@@ -1,4 +1,4 @@
-
+# %%writefile /kaggle/working/DMNSP/continual_clip/utils.py
 import os
 import json
 import yaml
@@ -19,6 +19,8 @@ _tokenizer = _Tokenizer()
 
 def get_class_order(file_name: str) -> list:
     r"""TO BE DOCUMENTED"""
+    if "imagenet100" in file_name:
+        file_name = "/kaggle/working/DMNSP/class_orders/imagenet100.yaml"
     with open(file_name, "r+") as f:
         data = yaml.safe_load(f)
         return data["class_order"]
@@ -33,10 +35,32 @@ def get_class_names(classes_names, class_ids_per_task):
     return [classes_names[class_id] for class_id in class_ids_per_task]
 
 
-def get_dataset_class_names(workdir, dataset_name, long=False):
-    with open(os.path.join(workdir, "dataset_reqs", f"{dataset_name}_classes.txt"), "r") as f:
+import os
+
+
+def get_dataset_class_names(workdir, dataset_name, long=False, data_path=None):
+    if "imagenet100" in dataset_name:
+        workdir = "/kaggle/working/DMNSP"
+    file_path = os.path.join(workdir, "dataset_reqs", f"{dataset_name}_classes.txt")
+
+    # Nếu chưa có thì copy từ file chuẩn
+    if not os.path.exists(file_path):
+        print("⚠️ Creating class file from predefined labels")
+
+        src = "/kaggle/working/tinyimagenet_labels.txt"
+        os.makedirs(os.path.dirname(file_path), exist_ok=True)
+
+        with open(src, "r") as f_src, open(file_path, "w") as f_dst:
+            f_dst.write(f_src.read())
+
+    with open(file_path, "r") as f:
         lines = f.read().splitlines()
-    return [line.split("\t")[-1] for line in lines]
+
+    class_names = [line.split("\t")[-1] for line in lines]
+
+    print("🔍 Some labels:", class_names[:10])
+
+    return class_names
 
 
 def save_config(config: DictConfig) -> None:

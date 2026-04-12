@@ -1,5 +1,6 @@
+# %%writefile /kaggle/working/DMNSP/continual_clip/datasets.py
 
-
+import matplotlib.pyplot as plt
 import os
 import torch.nn as nn
 
@@ -49,22 +50,42 @@ def get_dataset(cfg, is_train, transforms=None):
 
     # elif cfg.dataset == "tiny-imagenet-200":
     elif cfg.dataset == "tinyimagenet":
-        # data_path = '/data/kangborui/'
         data_path = os.path.join(cfg.dataset_root, cfg.dataset)
+    
         dataset = TinyImageNet200(
             data_path, 
             train=is_train,
             download=True
         )
-        classes_names = get_dataset_class_names(cfg.workdir, cfg.dataset)
+    
+        # ✅ Lấy class names từ file (bạn đã tạo trước đó)
+        classes_names = get_dataset_class_names(
+            cfg.workdir,
+            cfg.dataset
+        )
+    
+        print(f"✅ Total classes: {len(classes_names)}")
+        print("🔍 First 10 classes:", classes_names[:10])
+        print("🔍 Last 5 classes:", classes_names[-5:])
+    
         
+    # elif cfg.dataset == "imagenet100":
+    #     data_path = cfg.dataset_root
+    #     # data_path = os.path.join(cfg.dataset_root, "ImageNet")
+    #     dataset = ImageNet100(
+    #         data_path, 
+    #         train=is_train,
+    #         data_subset=os.path.join('/home/kangborui/ClProject/MoE-Adapters4CL-cross-guild-fusion/cil/dataset_reqs/imagenet100_splits', "train_100.txt" if is_train else "val_100.txt")
+    #     )
+    #     classes_names = get_dataset_class_names(cfg.workdir, cfg.dataset)
     elif cfg.dataset == "imagenet100":
-        data_path = cfg.dataset_root
+        dataset_path = cfg.dataset_root
         # data_path = os.path.join(cfg.dataset_root, "ImageNet")
+        data_path = "/kaggle/working/DMNSP"
         dataset = ImageNet100(
-            data_path, 
+            dataset_path, 
             train=is_train,
-            data_subset=os.path.join('/home/kangborui/ClProject/MoE-Adapters4CL-cross-guild-fusion/cil/dataset_reqs/imagenet100_splits', "train_100.txt" if is_train else "val_100.txt")
+            data_subset=os.path.join(data_path, cfg.sub_train_path if is_train else cfg.sub_val_path)
         )
         classes_names = get_dataset_class_names(cfg.workdir, cfg.dataset)
 
