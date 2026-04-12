@@ -34,7 +34,35 @@ class ImageNet1000(ImageFolderDataset):
         else:
             self.data_path = os.path.join(self.data_path, "val")
         return super().get_data()
+class ImageNet_R(ImageFolderDataset):
+    """Continuum dataset for datasets with tree-like structure.
+    :param train_folder: The folder of the train data.
+    :param test_folder: The folder of the test data.
+    :param download: Dummy parameter.
+    """
 
+    def __init__(
+            self,
+            data_path: str,
+            train: bool = True,
+            download: bool = False,
+    ):
+        super().__init__(data_path=data_path, train=train, download=download)
+    @property
+    def transformations(self):
+        """Default transformations if nothing is provided to the scenario."""
+        return [
+            transforms.Resize((224, 224)),
+            transforms.ToTensor(),
+            transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225))
+        ]
+
+    def get_data(self):
+        if self.train:
+            self.data_path = os.path.join(self.data_path, "train")
+        else:
+            self.data_path = os.path.join(self.data_path, "test")
+        return super().get_data()
 
 def get_dataset(cfg, is_train, transforms=None):
     if cfg.dataset == "cifar100":
