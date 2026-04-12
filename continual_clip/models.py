@@ -189,7 +189,7 @@ class ClassIncremental(nn.Module):
             k for k, v in self.model.named_parameters() if "adapt" in k
         ]
 
-        print('==================trainable params========================================', params_name)
+        # print('==================trainable params========================================', params_name)
         # optimizer
         optimizer = torch.optim.AdamW(params, lr=cfg.lr, weight_decay=cfg.weight_decay)
         scheduler = utils.cosine_lr(
