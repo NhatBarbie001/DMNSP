@@ -22,7 +22,7 @@ def continual_clip(cfg: DictConfig) -> None:
 
     set_seed(RANDOM_SEED)
 
-    cfg.workdir = "/***/DMNSP"
+    cfg.workdir = "/DMNSP"
     cfg.dataset_root = os.path.join(cfg.workdir, cfg.dataset_root)
 
     utils.save_config(cfg)
