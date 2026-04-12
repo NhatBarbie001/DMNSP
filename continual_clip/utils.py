@@ -36,7 +36,7 @@ def get_class_names(classes_names, class_ids_per_task):
 
 
 def get_dataset_class_names(workdir, dataset_name, long=False):
-    if "imagenet100" in dataset_name:
+    if ("imagenet100" in dataset_name) or ("imagenetR" in dataset_name):
         workdir = "/kaggle/working/DMNSP"
     with open(os.path.join(workdir, "dataset_reqs", f"{dataset_name}_classes.txt"), "r") as f:
         lines = f.read().splitlines()
