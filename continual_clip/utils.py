@@ -19,7 +19,7 @@ _tokenizer = _Tokenizer()
 
 def get_class_order(file_name: str) -> list:
     r"""TO BE DOCUMENTED"""
-    if("imagenet100" in file_name)
+    if("imagenet100" in file_name):
         file_name = "/kaggle/working/DMNSP/class_orders/imagenet100.yaml"
     with open(file_name, "r+") as f:
         data = yaml.safe_load(f)
