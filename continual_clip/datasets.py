@@ -59,12 +59,13 @@ def get_dataset(cfg, is_train, transforms=None):
         classes_names = get_dataset_class_names(cfg.workdir, cfg.dataset)
         
     elif cfg.dataset == "imagenet100":
-        data_path = cfg.dataset_root
+        dataset_root = cfg.dataset_root
+        split_data_path = "/kaggle/working/DMNSP"
         # data_path = os.path.join(cfg.dataset_root, "ImageNet")
         dataset = ImageNet100(
-            data_path, 
+            dataset_root, 
             train=is_train,
-            data_subset=os.path.join('/home/kangborui/ClProject/MoE-Adapters4CL-cross-guild-fusion/cil/dataset_reqs/imagenet100_splits', "train_100.txt" if is_train else "val_100.txt")
+            data_subset=os.path.join(split_data_path, cfg.sub_train_path if is_train else cfg.sub_val_path)
         )
         classes_names = get_dataset_class_names(cfg.workdir, cfg.dataset)
 
