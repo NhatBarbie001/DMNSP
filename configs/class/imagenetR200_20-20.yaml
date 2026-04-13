@@ -1,4 +1,3 @@
-%%writefile /kaggle/working/DMNSP/configs/class/imagenetR200_20-20.yaml
 hydra:
   run:
     dir: ./experiments/${scenario}/${dataset}_${initial_increment}-${increment}-${method}
