@@ -112,8 +112,8 @@ def continual_clip(cfg: DictConfig) -> None:
 
     with open(cfg.log_path, 'a+') as f:
         f.write(json.dumps({
-            'last_Cifar100': round(acc_list[-1], 2),
-            'avg_Cifar100': round(statistics.mean(acc_list), 2),
+            'last': round(acc_list[-1], 2),
+            'avg': round(statistics.mean(acc_list), 2),
             'avg_forgetting': round(statistics.mean(forgetting_list), 2)
         }) + '\n')
 

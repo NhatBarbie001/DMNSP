@@ -1,25 +1,28 @@
+# %%writefile /kaggle/working/DMNSP/configs/class/tinyimagenet_100-5.yaml
 hydra:
-  run:
-    dir: ./experiments/${scenario}/${dataset}_${initial_increment}-${increment}-${method}
-  job:
-    chdir: true
+      run:
+        dir: ./experiments/${scenario}/${dataset}_${initial_increment}-${increment}-${method}
+      job:
+        chdir: true
+    
+      job_logging:
+        version: 1
+        formatters:
+          simple:
+            format: '%(message)s'
 
-  job_logging:
-    version: 1
-    formatters:
-      simple:
-        format: '%(message)s'
-
-class_order: ""
-dataset_root: ""
+class_order: "/kaggle/working/DMNSP/class_orders/tinyimagenet.yaml"
+dataset_root: "/kaggle/working"
 workdir: ""
 log_path: "metrics.json"
 model_name: "ViT-B/16"
 prompt_template: "a bad photo of a {}."
 
-batch_size: 128
-initial_increment: 100  
-increment: 20
+batch_size: 64
+initial_increment: 100
+increment: 5
+# fixed here======================
+task_num: 21
 scenario: "class"
 dataset: "tinyimagenet"
 
@@ -30,7 +33,10 @@ ce_method: 0
 method: "DMNSP"
 lr: 1e-3
 ls: 0.0
-we: 
-avg_freq:  
-ref_dataset:
-ref_sentences: random
+
+
+visual_clsf_lr: 0.0005
+visual_clsf_batch_size: 64
+visual_clsf_epochs: 3
+a: 1
+b: 4

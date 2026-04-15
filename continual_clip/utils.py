@@ -21,6 +21,9 @@ def get_class_order(file_name: str) -> list:
     r"""TO BE DOCUMENTED"""
     if("imagenet100" in file_name):
         file_name = "/kaggle/working/DMNSP/class_orders/imagenet100.yaml"
+    elif("tinyimagenet" in file_name):
+        file_name = "/kaggle/working/DMNSP/class_orders/tinyimagenet.yaml"  
+    
     with open(file_name, "r+") as f:
         data = yaml.safe_load(f)
         return data["class_order"]
@@ -36,7 +39,11 @@ def get_class_names(classes_names, class_ids_per_task):
 
 
 def get_dataset_class_names(workdir, dataset_name, long=False):
-    if ("imagenet100" in dataset_name) or ("imagenetR" in dataset_name):
+    ok = False
+    ok = ok or ("imagenet100" in dataset_name)
+    ok = ok or ("imagenetR" in dataset_name)
+    ok = ok or ("tinyimagenet" in dataset_name)
+    if ok:
         workdir = "/kaggle/working/DMNSP"
     with open(os.path.join(workdir, "dataset_reqs", f"{dataset_name}_classes.txt"), "r") as f:
         lines = f.read().splitlines()
