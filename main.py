@@ -96,7 +96,10 @@ def continual_clip(cfg: DictConfig) -> None:
         else:
             for inputs, targets, task_ids in tqdm(eval_loader):
                 inputs, targets = inputs.cuda(device=0), targets.cuda(device=0)
-                outputs = model.module.cuda(0)(inputs.cuda(0), task_ids)
+                outputs, image_feature, text_feature  = model.module.forward_for_extra_visual_clsf(inputs, 
+                                                                                                    test=True, 
+                                                                                                    # all_test=cfg.all_test, 
+                                                                                                    return_feature=True)
                 metric_logger.add([outputs.cpu().argmax(dim=1), targets.cpu(), task_ids], subset="test")
 
         acc_list.append(100 * metric_logger.accuracy)
