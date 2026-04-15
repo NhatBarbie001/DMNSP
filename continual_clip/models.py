@@ -16,8 +16,6 @@ EPOCH_NUM = 4
 TOP_K_RATIO = 0.1
 LAMBDA_SCALE = 30
 LAYER_NUM = 12
-# tqdm: percent + bar + n/total only (no ETA / rate suffix)
-_TQDM_BAR_FMT = "{l_bar}{bar}| {n_fmt}/{total_fmt}"
 
 def intra_cls(logits, y, classes):
     y = y - classes
@@ -174,9 +172,6 @@ class ClassIncremental(nn.Module):
         EPOCH = EPOCH_NUM
         num_batches = len(train_loader)
         total_iterations = EPOCH * num_batches
-        show_progress = True #cfg.get("show_progress", True)
-        disable_pbar = not show_progress
-        task_subset = train_dataset[task_id:task_id + 1]
 
         print(f"\n========== Task {task_id} ==========\n")
 
@@ -197,27 +192,20 @@ class ClassIncremental(nn.Module):
         scheduler = utils.cosine_lr(
             optimizer, cfg.lr, 30, total_iterations
         )
-        self.model = self.model.to(self.device)
+        self.model = self.model.cuda(device=0)
 
 
         classnames = get_class_names(self.classes_names, self.class_ids_per_task[task_id])
         print(classnames)
         texts = [self.prompt_template.format(c) for c in classnames]
-        texts = clip.tokenize(texts).to(self.device)
+        texts = clip.tokenize(texts).cuda(device=0)
 
 
         self.model.train()
 
         batch_count = 0
         lamda = [[0 for _ in range(LAYER_NUM)] for _ in range(LAYER_NUM)]
-        for iteration in tqdm(
-            range(total_iterations + 1),
-            desc=f"Task {task_id} | CLIP adapt",
-            disable=disable_pbar,
-            unit="step",
-            bar_format=_TQDM_BAR_FMT,
-            dynamic_ncols=True,
-        ):
+        for iteration in tqdm(range(total_iterations + 1)):
             scheduler(iteration)
             try:
                 inputs, targets, task_ids = next(train_iter)
@@ -226,7 +214,7 @@ class ClassIncremental(nn.Module):
                 inputs, targets, task_ids = next(train_iter)
 
             if cfg.dataset == "tinyimagenet" and task_id != 0:
-                shift = 100 + (task_id - 1) * cfg.increment
+                shift = cfg.initial_increment + (task_id - 1) * cfg.increment
                 targets -= shift
             elif cfg.dataset == "imagenet100" and task_id != 0:
                 shift = cfg.initial_increment + (task_id - 1) * cfg.increment
@@ -235,11 +223,13 @@ class ClassIncremental(nn.Module):
                 shift = task_id * cfg.increment
                 targets -= shift
 
-            inputs, targets = inputs.to(self.device), targets.to(self.device)
-            logits_per_image, _ = self.model.to(self.device)(inputs, texts.to(self.device), 0, is_train=True)  # 分开
+            inputs, targets = inputs.cuda(device=0), targets.cuda(device=0)
+            logits_per_image, _ = self.model.cuda(device=0)(inputs, texts.cuda(device=0), 0, is_train=True)  # 分开
 
             loss = F.cross_entropy(logits_per_image, targets, label_smoothing=cfg.ls)
             self.loss_list.append(loss)
+            print('CELoss: {}'.format(loss))
+
             optimizer.zero_grad()
             loss.backward()
 
@@ -289,22 +279,16 @@ class ClassIncremental(nn.Module):
             # pdb.set_trace()
             torch.cuda.empty_cache()
             self.model.eval()
+            e_num = cfg.visual_clsf_epochs
             vision_clsf_loader = DataLoader(
-                task_subset,
+                train_dataset[task_id:task_id + 1],
                 batch_size=self.visual_clsf_batch_size,
                 shuffle=True,
                 num_workers=2,
             )
             features_dict = {}
             with torch.no_grad():
-                for inputs, targets, t in tqdm(
-                    vision_clsf_loader,
-                    desc=f"Task {task_id} | collect features",
-                    disable=disable_pbar,
-                    unit="batch",
-                    bar_format=_TQDM_BAR_FMT,
-                    dynamic_ncols=True,
-                ):
+                for inputs, targets, t in tqdm(vision_clsf_loader):
                     inputs, targets = inputs.to(self.device), targets.to(self.device)
                     _, features, __ = self.forward_for_extra_visual_clsf(inputs, test=True, return_feature=True)
                     for feature, target in zip(features, targets):
@@ -324,57 +308,41 @@ class ClassIncremental(nn.Module):
             else:
                 self.vision_clsf.set_weight(mean_features)
                 pass
-            e_num = self.visual_clsf_epochs
             optimizer = torch.optim.Adam(self.vision_clsf.parameters(), lr=cfg.visual_clsf_lr)
             scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, e_num*len(vision_clsf_loader), eta_min=cfg.visual_clsf_lr*0.01)
-            total_vc_batches = e_num * len(vision_clsf_loader)
-            with tqdm(
-                total=total_vc_batches,
-                desc=f"Task {task_id} | visual clf",
-                disable=disable_pbar,
-                unit="batch",
-                bar_format=_TQDM_BAR_FMT,
-                dynamic_ncols=True,
-            ) as pbar_vc:
-                for e in range(e_num):
-                    bach_i = -1
-                    for inputs, targets, t in vision_clsf_loader:
-                        inputs, targets = inputs.to(self.device), targets.to(self.device)
-                        # pdb.set_trace()
-                        with torch.no_grad():
-                            outputs, _ = self.forward_for_extra_visual_clsf(inputs, return_feature=True)
-                        # pdb.set_trace()
-                        outputs = self.vision_clsf(outputs)
-                        # pdb.set_trace()
-                        loss = intra_cls(outputs,targets, targets_bais).mean()
-                        # loss = F.cross_entropy(outputs, targets)
-                        optimizer.zero_grad()
-                        loss.backward()
-                        optimizer.step()
-                        bach_i+=1
-                        if bach_i % 10 == 0:
-                            logging.info(f"Epoch {e + 1}/{e_num} | Batch {bach_i + 1}/{len(vision_clsf_loader)} | Loss: {loss.item()}")
-                        scheduler.step()
-                        pbar_vc.update(1)
+            # total_vc_batches = e_num * len(vision_clsf_loader)
+            
+            for e in range(e_num):
+                bach_i = -1
+                for inputs, targets, t in vision_clsf_loader:
+                    inputs, targets = inputs.to(self.device), targets.to(self.device)
+                    # pdb.set_trace()
+                    with torch.no_grad():
+                        outputs, _ = self.forward_for_extra_visual_clsf(inputs, return_feature=True)
+                    # pdb.set_trace()
+                    outputs = self.vision_clsf(outputs)
+                    # pdb.set_trace()
+                    loss = intra_cls(outputs,targets, targets_bais).mean()
+                    # loss = F.cross_entropy(outputs, targets)
+                    optimizer.zero_grad()
+                    loss.backward()
+                    optimizer.step()
+                    bach_i+=1
+                    if bach_i % 10 == 0:
+                        logging.info(f"Epoch {e + 1}/{e_num} | Batch {bach_i + 1}/{len(vision_clsf_loader)} | Loss: {loss.item()}")
+                    scheduler.step()
         #======================================================================================
         train_loader_ = DataLoader(train_dataset[task_id:task_id + 1],
                                   batch_size=128,
                                   shuffle=True, num_workers=2)
         counts = 0
-        models = self.model.to(self.device)
-        for inputs, targets, task_ids in tqdm(
-            train_loader_,
-            total=1,
-            desc=f"Task {task_id} | SVD / U update",
-            disable=disable_pbar,
-            unit="batch",
-            bar_format=_TQDM_BAR_FMT,
-            dynamic_ncols=True,
-        ):
-            inputs = inputs.to(self.device)
+        models = self.model.cuda(0)
+        for inputs, targets, task_ids in tqdm(train_loader_):
+            inputs = inputs.cuda(device=0)
 
             with torch.no_grad():
-                outputs = models(inputs, texts.to(self.device), 0, is_train=False)
+                outputs = models(inputs, texts.cuda(0), 0, is_train=False)
+
 
             for i in range(LAYER_NUM):
                 if len(self.visual_cur_matrix) == i:
