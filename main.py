@@ -94,6 +94,7 @@ def continual_clip(cfg: DictConfig) -> None:
                 #     outputs = model(inputs, test=True, all_test=cfg.all_test)
                 #     metric_logger.add([outputs.cpu().argmax(dim=1), targets.cpu(), task_ids], subset="test")
         else:
+            print("Not using visual classifier, evaluating with original model.---===============================")
             for inputs, targets, task_ids in tqdm(eval_loader):
                 inputs, targets = inputs.cuda(device=0), targets.cuda(device=0)
                 outputs, image_feature, text_feature  = model.module.forward_for_extra_visual_clsf(inputs, 
