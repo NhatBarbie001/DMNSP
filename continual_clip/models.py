@@ -17,36 +17,36 @@ TOP_K_RATIO = 0.1
 LAMBDA_SCALE = 30
 LAYER_NUM = 12
 
-def intra_cls(logits, y, classes):
-    y = y - classes
-    logits1 = logits[:, classes:]
-    return F.cross_entropy(logits1, y, reduction='none')
-class VisionClassifier(nn.Module):
-    def __init__(self, in_features, num_classes, weight_init=None, activation=None):
-        super().__init__()
-        self.fc = nn.Linear(in_features, num_classes, bias=False)
-        self.fc = nn.Parameter(self.fc.weight.data)
-        if weight_init is not None:
-            self.fc.data = weight_init
-        if activation is not None:
-            self.activation = activation
-        else:
-            self.activation = nn.Identity()
+# def intra_cls(logits, y, classes):
+#     y = y - classes
+#     logits1 = logits[:, classes:]
+#     return F.cross_entropy(logits1, y, reduction='none')
+# class VisionClassifier(nn.Module):
+#     def __init__(self, in_features, num_classes, weight_init=None, activation=None):
+#         super().__init__()
+#         self.fc = nn.Linear(in_features, num_classes, bias=False)
+#         self.fc = nn.Parameter(self.fc.weight.data)
+#         if weight_init is not None:
+#             self.fc.data = weight_init
+#         if activation is not None:
+#             self.activation = activation
+#         else:
+#             self.activation = nn.Identity()
     
-    def add_weight(self, weight):
-        self.fc = nn.Parameter(torch.cat([self.fc, weight], dim=0))
+#     def add_weight(self, weight):
+#         self.fc = nn.Parameter(torch.cat([self.fc, weight], dim=0))
 
-    def set_weight(self, weight):
-        self.fc = nn.Parameter(weight)
+#     def set_weight(self, weight):
+#         self.fc = nn.Parameter(weight)
 
 
-    def forward(self, x):
-        # normalize the weights
-        x = F.normalize(x, p=2, dim=-1)
-        weight = F.normalize(self.fc, p=2, dim=-1)
-        x = F.linear(x, weight)
-        x = self.activation(x)
-        return x
+#     def forward(self, x):
+#         # normalize the weights
+#         x = F.normalize(x, p=2, dim=-1)
+#         weight = F.normalize(self.fc, p=2, dim=-1)
+#         x = F.linear(x, weight)
+#         x = self.activation(x)
+#         return x
 
 
 class ClassIncremental(nn.Module):
@@ -67,13 +67,13 @@ class ClassIncremental(nn.Module):
         self.visual_U = {}
         self.loss_list = []
 
-        self.visual_clsf_epochs = cfg.visual_clsf_epochs
-        self.visual_clsf_batch_size = cfg.visual_clsf_batch_size
-        self.vision_clsf = None
-        if cfg.model_name == "ViT-L/14":
-            self.vision_clsf = VisionClassifier(768, cfg.increment, activation=None)
-        else:
-            self.vision_clsf = VisionClassifier(512, cfg.increment, activation=None)
+        # self.visual_clsf_epochs = cfg.visual_clsf_epochs
+        # self.visual_clsf_batch_size = cfg.visual_clsf_batch_size
+        # self.vision_clsf = None
+        # if cfg.model_name == "ViT-L/14":
+        #     self.vision_clsf = VisionClassifier(768, cfg.increment, activation=None)
+        # else:
+        #     self.vision_clsf = VisionClassifier(512, cfg.increment, activation=None)
 
 
     def forward(self, image, taskid):
@@ -88,86 +88,86 @@ class ClassIncremental(nn.Module):
             [self.prompt_template.format(c) for c in self.current_class_names]
         ).to(self.device)
         # Fixed here
-        if task_id == 0:
-            class_names = []
-            for i in range(cfg.task_num):
-                class_names += get_class_names(self.classes_names, self.class_ids_per_task[i])
-            self.all_class_names = class_names
-            self.all_text_tokens = clip.tokenize(
-                [self.prompt_template.format(c) for c in self.all_class_names]
-            ).to(self.device)
+        # if task_id == 0:
+        #     class_names = []
+        #     for i in range(cfg.task_num):
+        #         class_names += get_class_names(self.classes_names, self.class_ids_per_task[i])
+        #     self.all_class_names = class_names
+        #     self.all_text_tokens = clip.tokenize(
+        #         [self.prompt_template.format(c) for c in self.all_class_names]
+        #     ).to(self.device)
 
         if cfg.method != "zeroshot":
             self.train(task_id, cfg, train_dataset, train_classes_names, world)
 
-    # Fixed hereeeeeeeeeeeeee=======================================================
-    def forward_clip(self, image, text, return_feature=False):
-        image_features, _ = self.model.encode_image(image)
-        text_features, _ = self.model.encode_text(text)
+    # # Fixed hereeeeeeeeeeeeee=======================================================
+    # def forward_clip(self, image, text, return_feature=False):
+    #     image_features, _ = self.model.encode_image(image)
+    #     text_features, _ = self.model.encode_text(text)
 
-        # normalized features
-        image_features = image_features / image_features.norm(dim=1, keepdim=True)
-        text_features = text_features / text_features.norm(dim=1, keepdim=True)
+    #     # normalized features
+    #     image_features = image_features / image_features.norm(dim=1, keepdim=True)
+    #     text_features = text_features / text_features.norm(dim=1, keepdim=True)
 
-        # cosine similarity as logits
-        logit_scale = self.model.logit_scale.exp()
-        logits_per_image = logit_scale * image_features @ text_features.t()
-        logits_per_text = logits_per_image.t()
+    #     # cosine similarity as logits
+    #     logit_scale = self.model.logit_scale.exp()
+    #     logits_per_image = logit_scale * image_features @ text_features.t()
+    #     logits_per_text = logits_per_image.t()
 
-        if return_feature:
-            return logits_per_image, logits_per_text, image_features, text_features
-        # shape = [global_batch_size, global_batch_size]
-        return logits_per_image, logits_per_text
-    # Fixed hereeeeeeeeeeeeee=======================================================
-    def forward_for_extra_visual_clsf(self, image, test=False, all_test=False, return_feature=False, replay=None):
-        if test:
-            # pdb.set_trace()
-            with torch.no_grad():
-                if all_test:
-                    if return_feature:
-                        logits_per_image, _, image_features, __ = self.forward_clip(image, self.all_text_tokens, return_feature=return_feature)
-                    else:
-                        logits_per_image, _ = self.forward_clip(image, self.all_text_tokens)
-                    # logits_per_image = self.inference(image, self.all_text_tokens)
-                else:
-                    if return_feature:
-                        logits_per_image, _, image_features, __ = self.forward_clip(image, self.text_tokens, return_feature=return_feature)
-                    else:
-                        logits_per_image, _ = self.forward_clip(image, self.text_tokens)
-                # pdb.set_trace()
-                probs = logits_per_image.softmax(dim=-1)
-        else:
+    #     if return_feature:
+    #         return logits_per_image, logits_per_text, image_features, text_features
+    #     # shape = [global_batch_size, global_batch_size]
+    #     return logits_per_image, logits_per_text
+    # # Fixed hereeeeeeeeeeeeee=======================================================
+    # def forward_for_extra_visual_clsf(self, image, test=False, all_test=False, return_feature=False, replay=None):
+    #     if test:
+    #         # pdb.set_trace()
+    #         with torch.no_grad():
+    #             if all_test:
+    #                 if return_feature:
+    #                     logits_per_image, _, image_features, __ = self.forward_clip(image, self.all_text_tokens, return_feature=return_feature)
+    #                 else:
+    #                     logits_per_image, _ = self.forward_clip(image, self.all_text_tokens)
+    #                 # logits_per_image = self.inference(image, self.all_text_tokens)
+    #             else:
+    #                 if return_feature:
+    #                     logits_per_image, _, image_features, __ = self.forward_clip(image, self.text_tokens, return_feature=return_feature)
+    #                 else:
+    #                     logits_per_image, _ = self.forward_clip(image, self.text_tokens)
+    #             # pdb.set_trace()
+    #             probs = logits_per_image.softmax(dim=-1)
+    #     else:
 
-            if return_feature:
-                __, _, image_features, text_features = self.forward_clip(image, self.text_tokens, return_feature=return_feature)
-                return image_features, text_features
-            if replay is not None:
-                logits_per_image, _ = self.forward_clip(image, self.text_tokens)
-                # text_features_for_replay = self.model.encode_text(self.text_tokens[:-self.cfg.increment])
-                text_features_for_replay, _ = self.model.encode_text(self.text_tokens)
-                text_features_for_replay, _ = text_features_for_replay / text_features_for_replay.norm(dim=1, keepdim=True)
-                replay_features = replay / replay.norm(dim=1, keepdim=True)
-                replay_logits = replay_features @ text_features_for_replay.t() * 100
-            else:
-                logits_per_image, _ = self.forward_clip(image, self.text_tokens)
-            probs = logits_per_image
+    #         if return_feature:
+    #             __, _, image_features, text_features = self.forward_clip(image, self.text_tokens, return_feature=return_feature)
+    #             return image_features, text_features
+    #         if replay is not None:
+    #             logits_per_image, _ = self.forward_clip(image, self.text_tokens)
+    #             # text_features_for_replay = self.model.encode_text(self.text_tokens[:-self.cfg.increment])
+    #             text_features_for_replay, _ = self.model.encode_text(self.text_tokens)
+    #             text_features_for_replay, _ = text_features_for_replay / text_features_for_replay.norm(dim=1, keepdim=True)
+    #             replay_features = replay / replay.norm(dim=1, keepdim=True)
+    #             replay_logits = replay_features @ text_features_for_replay.t() * 100
+    #         else:
+    #             logits_per_image, _ = self.forward_clip(image, self.text_tokens)
+    #         probs = logits_per_image
                 
-        if return_feature:
-            text_features, _ = self.model.encode_text(self.all_text_tokens)
-            return probs, image_features, text_features
+    #     if return_feature:
+    #         text_features, _ = self.model.encode_text(self.all_text_tokens)
+    #         return probs, image_features, text_features
 
-        if replay is not None:
-            return probs, replay_logits
-        return probs
+    #     if replay is not None:
+    #         return probs, replay_logits
+    #     return probs
     def train(self, task_id, cfg, train_dataset, train_classes_names, world):
 
         train_loader = DataLoader(train_dataset[task_id:task_id + 1],
                                   batch_size=cfg.batch_size,
                                   shuffle=True, num_workers=2)
-        if task_id == 0:
-            targets_bais = 0
-        else:
-            targets_bais = cfg.initial_increment + (task_id - 1) * cfg.increment
+        # if task_id == 0:
+        #     targets_bais = 0
+        # else:
+        #     targets_bais = cfg.initial_increment + (task_id - 1) * cfg.increment
         train_iter = iter(train_loader)
         EPOCH = EPOCH_NUM
         num_batches = len(train_loader)
@@ -274,63 +274,63 @@ class ClassIncremental(nn.Module):
             optimizer.step()
 
         torch.cuda.empty_cache()
-        # fix here:============================================================================
-        if cfg.visual_clsf:
-            # pdb.set_trace()
-            torch.cuda.empty_cache()
-            self.model.eval()
-            e_num = cfg.visual_clsf_epochs
-            vision_clsf_loader = DataLoader(
-                train_dataset[task_id:task_id + 1],
-                batch_size=self.visual_clsf_batch_size,
-                shuffle=True,
-                num_workers=2,
-            )
-            features_dict = {}
-            with torch.no_grad():
-                for inputs, targets, t in tqdm(vision_clsf_loader):
-                    inputs, targets = inputs.to(self.device), targets.to(self.device)
-                    _, features, __ = self.forward_for_extra_visual_clsf(inputs, test=True, return_feature=True)
-                    for feature, target in zip(features, targets):
-                        target = target.item()
-                        if target not in features_dict:
-                            features_dict[target] = []
-                        features_dict[target].append(feature.cpu())
-            mean_features = []
-            for target in sorted(features_dict.keys()):
-                features = torch.stack(features_dict[target])
-                mean_feature = features.mean(dim=0)
-                mean_features.append(mean_feature.unsqueeze(0))
-            mean_features = torch.cat(mean_features).to(self.device)
-            if task_id > 0:
-                self.vision_clsf.add_weight(mean_features)
-                pass
-            else:
-                self.vision_clsf.set_weight(mean_features)
-                pass
-            optimizer = torch.optim.Adam(self.vision_clsf.parameters(), lr=cfg.visual_clsf_lr)
-            scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, e_num*len(vision_clsf_loader), eta_min=cfg.visual_clsf_lr*0.01)
-            # total_vc_batches = e_num * len(vision_clsf_loader)
+        # # fix here:============================================================================
+        # if cfg.visual_clsf:
+        #     # pdb.set_trace()
+        #     torch.cuda.empty_cache()
+        #     self.model.eval()
+        #     e_num = cfg.visual_clsf_epochs
+        #     vision_clsf_loader = DataLoader(
+        #         train_dataset[task_id:task_id + 1],
+        #         batch_size=self.visual_clsf_batch_size,
+        #         shuffle=True,
+        #         num_workers=2,
+        #     )
+        #     features_dict = {}
+        #     with torch.no_grad():
+        #         for inputs, targets, t in tqdm(vision_clsf_loader):
+        #             inputs, targets = inputs.to(self.device), targets.to(self.device)
+        #             _, features, __ = self.forward_for_extra_visual_clsf(inputs, test=True, return_feature=True)
+        #             for feature, target in zip(features, targets):
+        #                 target = target.item()
+        #                 if target not in features_dict:
+        #                     features_dict[target] = []
+        #                 features_dict[target].append(feature.cpu())
+        #     mean_features = []
+        #     for target in sorted(features_dict.keys()):
+        #         features = torch.stack(features_dict[target])
+        #         mean_feature = features.mean(dim=0)
+        #         mean_features.append(mean_feature.unsqueeze(0))
+        #     mean_features = torch.cat(mean_features).to(self.device)
+        #     if task_id > 0:
+        #         self.vision_clsf.add_weight(mean_features)
+        #         pass
+        #     else:
+        #         self.vision_clsf.set_weight(mean_features)
+        #         pass
+        #     optimizer = torch.optim.Adam(self.vision_clsf.parameters(), lr=cfg.visual_clsf_lr)
+        #     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, e_num*len(vision_clsf_loader), eta_min=cfg.visual_clsf_lr*0.01)
+        #     # total_vc_batches = e_num * len(vision_clsf_loader)
             
-            for e in range(e_num):
-                bach_i = -1
-                for inputs, targets, t in vision_clsf_loader:
-                    inputs, targets = inputs.to(self.device), targets.to(self.device)
-                    # pdb.set_trace()
-                    with torch.no_grad():
-                        outputs, _ = self.forward_for_extra_visual_clsf(inputs, return_feature=True)
-                    # pdb.set_trace()
-                    outputs = self.vision_clsf(outputs)
-                    # pdb.set_trace()
-                    loss = intra_cls(outputs,targets, targets_bais).mean()
-                    # loss = F.cross_entropy(outputs, targets)
-                    optimizer.zero_grad()
-                    loss.backward()
-                    optimizer.step()
-                    bach_i+=1
-                    if bach_i % 10 == 0:
-                        logging.info(f"Epoch {e + 1}/{e_num} | Batch {bach_i + 1}/{len(vision_clsf_loader)} | Loss: {loss.item()}")
-                    scheduler.step()
+        #     for e in range(e_num):
+        #         bach_i = -1
+        #         for inputs, targets, t in vision_clsf_loader:
+        #             inputs, targets = inputs.to(self.device), targets.to(self.device)
+        #             # pdb.set_trace()
+        #             with torch.no_grad():
+        #                 outputs, _ = self.forward_for_extra_visual_clsf(inputs, return_feature=True)
+        #             # pdb.set_trace()
+        #             outputs = self.vision_clsf(outputs)
+        #             # pdb.set_trace()
+        #             loss = intra_cls(outputs,targets, targets_bais).mean()
+        #             # loss = F.cross_entropy(outputs, targets)
+        #             optimizer.zero_grad()
+        #             loss.backward()
+        #             optimizer.step()
+        #             bach_i+=1
+        #             if bach_i % 10 == 0:
+        #                 logging.info(f"Epoch {e + 1}/{e_num} | Batch {bach_i + 1}/{len(vision_clsf_loader)} | Loss: {loss.item()}")
+        #             scheduler.step()
         #======================================================================================
         train_loader_ = DataLoader(train_dataset[task_id:task_id + 1],
                                   batch_size=128,

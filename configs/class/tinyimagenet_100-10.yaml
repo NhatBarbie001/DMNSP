@@ -34,7 +34,7 @@ method: "DMNSP"
 lr: 1e-3
 ls: 0.0
 
-
+visual_clsf: True
 visual_clsf_lr: 0.0005
 visual_clsf_batch_size: 64
 visual_clsf_epochs: 3
