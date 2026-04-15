@@ -100,7 +100,7 @@ class ClassIncremental(nn.Module):
         if cfg.method != "zeroshot":
             self.train(task_id, cfg, train_dataset, train_classes_names, world)
 
-    # # Fixed hereeeeeeeeeeeeee=======================================================
+    # Fixed hereeeeeeeeeeeeee=======================================================
     # def forward_clip(self, image, text, return_feature=False):
     #     image_features, _ = self.model.encode_image(image)
     #     text_features, _ = self.model.encode_text(text)
@@ -163,7 +163,7 @@ class ClassIncremental(nn.Module):
 
         train_loader = DataLoader(train_dataset[task_id:task_id + 1],
                                   batch_size=cfg.batch_size,
-                                  shuffle=True, num_workers=2)
+                                  shuffle=True, num_workers=8)
         # if task_id == 0:
         #     targets_bais = 0
         # else:
@@ -334,7 +334,7 @@ class ClassIncremental(nn.Module):
         #======================================================================================
         train_loader_ = DataLoader(train_dataset[task_id:task_id + 1],
                                   batch_size=128,
-                                  shuffle=True, num_workers=2)
+                                  shuffle=True, num_workers=8)
         counts = 0
         models = self.model.cuda(0)
         for inputs, targets, task_ids in tqdm(train_loader_):
