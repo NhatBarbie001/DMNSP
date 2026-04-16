@@ -24,14 +24,15 @@ def intra_cls(logits, y, classes):
 class VisionClassifier(nn.Module):
     def __init__(self, in_features, num_classes, weight_init=None, activation=None):
         super().__init__()
-        # self.fc = nn.Linear(in_features, num_classes, bias=False)
-        # self.fc = nn.Parameter(self.fc.weight.data)
+        self.fc = nn.Linear(in_features, num_classes, bias=False)
+        self.fc = nn.Parameter(self.fc.weight.data)
         # if weight_init is not None:
         #     self.fc.data = weight_init
         # if activation is not None:
         #     self.activation = activation
         # else:
         #     self.activation = nn.Identity()
+
     
     # def add_weight(self, weight):
     #     self.fc = nn.Parameter(torch.cat([self.fc, weight], dim=0))
@@ -74,7 +75,10 @@ class ClassIncremental(nn.Module):
             self.vision_clsf = VisionClassifier(768, cfg.increment, activation=None)
         else:
             self.vision_clsf = VisionClassifier(512, cfg.increment, activation=None)
-
+        # reset seed sau khi khởi tạo VisionClassifier
+        torch.manual_seed(32)
+        torch.cuda.manual_seed(32)
+        torch.cuda.manual_seed_all(32)
 
     def forward(self, image, taskid):
         with torch.no_grad():
