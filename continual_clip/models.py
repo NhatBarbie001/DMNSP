@@ -17,36 +17,36 @@ TOP_K_RATIO = 0.1
 LAMBDA_SCALE = 30
 LAYER_NUM = 12
 
-def intra_cls(logits, y, classes):
-    y = y - classes
-    logits1 = logits[:, classes:]
-    return F.cross_entropy(logits1, y, reduction='none')
-class VisionClassifier(nn.Module):
-    def __init__(self, in_features, num_classes, weight_init=None, activation=None):
-        super().__init__()
-        self.fc = nn.Linear(in_features, num_classes, bias=False)
-        self.fc = nn.Parameter(self.fc.weight.data)
-        if weight_init is not None:
-            self.fc.data = weight_init
-        if activation is not None:
-            self.activation = activation
-        else:
-            self.activation = nn.Identity()
+# def intra_cls(logits, y, classes):
+#     y = y - classes
+#     logits1 = logits[:, classes:]
+#     return F.cross_entropy(logits1, y, reduction='none')
+# class VisionClassifier(nn.Module):
+#     def __init__(self, in_features, num_classes, weight_init=None, activation=None):
+#         super().__init__()
+#         self.fc = nn.Linear(in_features, num_classes, bias=False)
+#         self.fc = nn.Parameter(self.fc.weight.data)
+#         if weight_init is not None:
+#             self.fc.data = weight_init
+#         if activation is not None:
+#             self.activation = activation
+#         else:
+#             self.activation = nn.Identity()
     
-    def add_weight(self, weight):
-        self.fc = nn.Parameter(torch.cat([self.fc, weight], dim=0))
+#     def add_weight(self, weight):
+#         self.fc = nn.Parameter(torch.cat([self.fc, weight], dim=0))
 
-    def set_weight(self, weight):
-        self.fc = nn.Parameter(weight)
+#     def set_weight(self, weight):
+#         self.fc = nn.Parameter(weight)
 
 
-    def forward(self, x):
-        # normalize the weights
-        x = F.normalize(x, p=2, dim=-1)
-        weight = F.normalize(self.fc, p=2, dim=-1)
-        x = F.linear(x, weight)
-        x = self.activation(x)
-        return x
+#     def forward(self, x):
+#         # normalize the weights
+#         x = F.normalize(x, p=2, dim=-1)
+#         weight = F.normalize(self.fc, p=2, dim=-1)
+#         x = F.linear(x, weight)
+#         x = self.activation(x)
+#         return x
 
 
 class ClassIncremental(nn.Module):
