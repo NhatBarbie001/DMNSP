@@ -60,45 +60,45 @@ def continual_clip(cfg: DictConfig) -> None:
         eval_loader = DataLoader(eval_dataset[:task_id + 1], batch_size=64, sampler=eval_sampler, num_workers=8)
         
         
-        # if(cfg.visual_clsf):
-        #     correct_per_class = defaultdict(int)
-        #     total_per_class = defaultdict(int)
-        #     for inputs, targets, task_ids in tqdm(eval_loader):
-        #         inputs, targets = inputs.to(model.module.device), targets.to(model.module.device)
-        #         # outputs = model.module(inputs, task_ids)
-        #         # metric_logger.add([outputs.cpu().argmax(dim=1), targets.cpu(), task_ids], subset="test")
-        #         with torch.no_grad():
-        #         # if cfg.visual_clsf:
-        #             a = cfg.a
-        #             b = cfg.b
+        if(cfg.visual_clsf):
+            correct_per_class = defaultdict(int)
+            total_per_class = defaultdict(int)
+            for inputs, targets, task_ids in tqdm(eval_loader):
+                inputs, targets = inputs.to(model.module.device), targets.to(model.module.device)
+                # outputs = model.module(inputs, task_ids)
+                # metric_logger.add([outputs.cpu().argmax(dim=1), targets.cpu(), task_ids], subset="test")
+                with torch.no_grad():
+                # if cfg.visual_clsf:
+                    a = cfg.a
+                    b = cfg.b
                     
-        #             outputs, image_feature, text_feature  = model.module.forward_for_extra_visual_clsf(inputs, 
-        #                                                                                             test=True, 
-        #                                                                                             # all_test=cfg.all_test, 
-        #                                                                                             return_feature=True)
-        #             vision_outputs = model.module.vision_clsf(image_feature)
+                    outputs, image_feature, text_feature  = model.module.forward_for_extra_visual_clsf(inputs, 
+                                                                                                    test=True, 
+                                                                                                    # all_test=cfg.all_test, 
+                                                                                                    return_feature=True)
+                    vision_outputs = model.module.vision_clsf(image_feature)
 
-        #             outputs_softmax = F.softmax(outputs, dim=1)
-        #             vision_outputs_softmax = F.softmax(vision_outputs, dim=1)
+                    outputs_softmax = F.softmax(outputs, dim=1)
+                    vision_outputs_softmax = F.softmax(vision_outputs, dim=1)
                     
-        #             combined_outputs = (a*outputs_softmax + b*vision_outputs_softmax) / (a + b)
+                    combined_outputs = (a*outputs_softmax + b*vision_outputs_softmax) / (a + b)
                     
-        #             metric_logger.add([combined_outputs.cpu().argmax(dim=1), targets.cpu(), task_ids], subset="test")
-        #             preds = combined_outputs.cpu().argmax(dim=1)
-        #             for l,p in zip(targets.cpu(), preds):
-        #                 label = l.item()
-        #                 total_per_class[label] += 1
-        #                 if l == p:
-        #                     correct_per_class[label] += 1
-        #         # else:
-        #         #     outputs = model(inputs, test=True, all_test=cfg.all_test)
-        #         #     metric_logger.add([outputs.cpu().argmax(dim=1), targets.cpu(), task_ids], subset="test")
-        # else:
-        print("Not using visual classifier, evaluating with original model.---===============================")
-        for inputs, targets, task_ids in tqdm(eval_loader):
-            inputs, targets = inputs.cuda(device=0), targets.cuda(device=0)
-            outputs = model.module.cuda(0)(inputs.cuda(device=0), task_ids)
-            metric_logger.add([outputs.cpu().argmax(dim=1), targets.cpu(), task_ids], subset="test")
+                    metric_logger.add([combined_outputs.cpu().argmax(dim=1), targets.cpu(), task_ids], subset="test")
+                    preds = combined_outputs.cpu().argmax(dim=1)
+                    for l,p in zip(targets.cpu(), preds):
+                        label = l.item()
+                        total_per_class[label] += 1
+                        if l == p:
+                            correct_per_class[label] += 1
+                # else:
+                #     outputs = model(inputs, test=True, all_test=cfg.all_test)
+                #     metric_logger.add([outputs.cpu().argmax(dim=1), targets.cpu(), task_ids], subset="test")
+        else:
+            print("Not using visual classifier, evaluating with original model.---===============================")
+            for inputs, targets, task_ids in tqdm(eval_loader):
+                inputs, targets = inputs.cuda(device=0), targets.cuda(device=0)
+                outputs = model.module.cuda(0)(inputs.cuda(device=0), task_ids)
+                metric_logger.add([outputs.cpu().argmax(dim=1), targets.cpu(), task_ids], subset="test")
 
         acc_list.append(100 * metric_logger.accuracy)
         forgetting_list.append(100 * metric_logger.forgetting)
