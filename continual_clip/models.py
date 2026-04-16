@@ -101,64 +101,64 @@ class ClassIncremental(nn.Module):
             self.train(task_id, cfg, train_dataset, train_classes_names, world)
 
     # Fixed hereeeeeeeeeeeeee=======================================================
-    def forward_clip(self, image, text, return_feature=False):
-        image_features, _ = self.model.encode_image(image)
-        text_features, _ = self.model.encode_text(text)
+    # def forward_clip(self, image, text, return_feature=False):
+    #     image_features, _ = self.model.encode_image(image)
+    #     text_features, _ = self.model.encode_text(text)
 
-        # normalized features
-        image_features = image_features / image_features.norm(dim=1, keepdim=True)
-        text_features = text_features / text_features.norm(dim=1, keepdim=True)
+    #     # normalized features
+    #     image_features = image_features / image_features.norm(dim=1, keepdim=True)
+    #     text_features = text_features / text_features.norm(dim=1, keepdim=True)
 
-        # cosine similarity as logits
-        logit_scale = self.model.logit_scale.exp()
-        logits_per_image = logit_scale * image_features @ text_features.t()
-        logits_per_text = logits_per_image.t()
+    #     # cosine similarity as logits
+    #     logit_scale = self.model.logit_scale.exp()
+    #     logits_per_image = logit_scale * image_features @ text_features.t()
+    #     logits_per_text = logits_per_image.t()
 
-        if return_feature:
-            return logits_per_image, logits_per_text, image_features, text_features
-        # shape = [global_batch_size, global_batch_size]
-        return logits_per_image, logits_per_text
-    # Fixed hereeeeeeeeeeeeee=======================================================
-    def forward_for_extra_visual_clsf(self, image, test=False, all_test=False, return_feature=False, replay=None):
-        if test:
-            # pdb.set_trace()
-            with torch.no_grad():
-                if all_test:
-                    if return_feature:
-                        logits_per_image, _, image_features, __ = self.forward_clip(image, self.all_text_tokens, return_feature=return_feature)
-                    else:
-                        logits_per_image, _ = self.forward_clip(image, self.all_text_tokens)
-                    # logits_per_image = self.inference(image, self.all_text_tokens)
-                else:
-                    if return_feature:
-                        logits_per_image, _, image_features, __ = self.forward_clip(image, self.text_tokens, return_feature=return_feature)
-                    else:
-                        logits_per_image, _ = self.forward_clip(image, self.text_tokens)
-                # pdb.set_trace()
-                probs = logits_per_image.softmax(dim=-1)
-        else:
+    #     if return_feature:
+    #         return logits_per_image, logits_per_text, image_features, text_features
+    #     # shape = [global_batch_size, global_batch_size]
+    #     return logits_per_image, logits_per_text
+    # # Fixed hereeeeeeeeeeeeee=======================================================
+    # def forward_for_extra_visual_clsf(self, image, test=False, all_test=False, return_feature=False, replay=None):
+    #     if test:
+    #         # pdb.set_trace()
+    #         with torch.no_grad():
+    #             if all_test:
+    #                 if return_feature:
+    #                     logits_per_image, _, image_features, __ = self.forward_clip(image, self.all_text_tokens, return_feature=return_feature)
+    #                 else:
+    #                     logits_per_image, _ = self.forward_clip(image, self.all_text_tokens)
+    #                 # logits_per_image = self.inference(image, self.all_text_tokens)
+    #             else:
+    #                 if return_feature:
+    #                     logits_per_image, _, image_features, __ = self.forward_clip(image, self.text_tokens, return_feature=return_feature)
+    #                 else:
+    #                     logits_per_image, _ = self.forward_clip(image, self.text_tokens)
+    #             # pdb.set_trace()
+    #             probs = logits_per_image.softmax(dim=-1)
+    #     else:
 
-            if return_feature:
-                __, _, image_features, text_features = self.forward_clip(image, self.text_tokens, return_feature=return_feature)
-                return image_features, text_features
-            if replay is not None:
-                logits_per_image, _ = self.forward_clip(image, self.text_tokens)
-                # text_features_for_replay = self.model.encode_text(self.text_tokens[:-self.cfg.increment])
-                text_features_for_replay, _ = self.model.encode_text(self.text_tokens)
-                text_features_for_replay, _ = text_features_for_replay / text_features_for_replay.norm(dim=1, keepdim=True)
-                replay_features = replay / replay.norm(dim=1, keepdim=True)
-                replay_logits = replay_features @ text_features_for_replay.t() * 100
-            else:
-                logits_per_image, _ = self.forward_clip(image, self.text_tokens)
-            probs = logits_per_image
+    #         if return_feature:
+    #             __, _, image_features, text_features = self.forward_clip(image, self.text_tokens, return_feature=return_feature)
+    #             return image_features, text_features
+    #         if replay is not None:
+    #             logits_per_image, _ = self.forward_clip(image, self.text_tokens)
+    #             # text_features_for_replay = self.model.encode_text(self.text_tokens[:-self.cfg.increment])
+    #             text_features_for_replay, _ = self.model.encode_text(self.text_tokens)
+    #             text_features_for_replay, _ = text_features_for_replay / text_features_for_replay.norm(dim=1, keepdim=True)
+    #             replay_features = replay / replay.norm(dim=1, keepdim=True)
+    #             replay_logits = replay_features @ text_features_for_replay.t() * 100
+    #         else:
+    #             logits_per_image, _ = self.forward_clip(image, self.text_tokens)
+    #         probs = logits_per_image
                 
-        if return_feature:
-            text_features, _ = self.model.encode_text(self.all_text_tokens)
-            return probs, image_features, text_features
+    #     if return_feature:
+    #         text_features, _ = self.model.encode_text(self.all_text_tokens)
+    #         return probs, image_features, text_features
 
-        if replay is not None:
-            return probs, replay_logits
-        return probs
+    #     if replay is not None:
+    #         return probs, replay_logits
+    #     return probs
     def train(self, task_id, cfg, train_dataset, train_classes_names, world):
 
         train_loader = DataLoader(train_dataset[task_id:task_id + 1],
