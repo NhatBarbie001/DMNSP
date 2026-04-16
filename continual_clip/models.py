@@ -164,10 +164,10 @@ class ClassIncremental(nn.Module):
         train_loader = DataLoader(train_dataset[task_id:task_id + 1],
                                   batch_size=cfg.batch_size,
                                   shuffle=True, num_workers=8)
-        if task_id == 0:
-            targets_bais = 0
-        else:
-            targets_bais = cfg.initial_increment + (task_id - 1) * cfg.increment
+        # if task_id == 0:
+        #     targets_bais = 0
+        # else:
+        #     targets_bais = cfg.initial_increment + (task_id - 1) * cfg.increment
         train_iter = iter(train_loader)
         EPOCH = EPOCH_NUM
         num_batches = len(train_loader)
@@ -275,62 +275,62 @@ class ClassIncremental(nn.Module):
 
         torch.cuda.empty_cache()
         # # fix here:============================================================================
-        if cfg.visual_clsf:
-            # pdb.set_trace()
-            torch.cuda.empty_cache()
-            self.model.eval()
-            e_num = cfg.visual_clsf_epochs
-            vision_clsf_loader = DataLoader(
-                train_dataset[task_id:task_id + 1],
-                batch_size=self.visual_clsf_batch_size,
-                shuffle=True,
-                num_workers=2,
-            )
-            features_dict = {}
-            with torch.no_grad():
-                for inputs, targets, t in tqdm(vision_clsf_loader):
-                    inputs, targets = inputs.to(self.device), targets.to(self.device)
-                    _, features, __ = self.forward_for_extra_visual_clsf(inputs, test=True, return_feature=True)
-                    for feature, target in zip(features, targets):
-                        target = target.item()
-                        if target not in features_dict:
-                            features_dict[target] = []
-                        features_dict[target].append(feature.cpu())
-            mean_features = []
-            for target in sorted(features_dict.keys()):
-                features = torch.stack(features_dict[target])
-                mean_feature = features.mean(dim=0)
-                mean_features.append(mean_feature.unsqueeze(0))
-            mean_features = torch.cat(mean_features).to(self.device)
-            if task_id > 0:
-                self.vision_clsf.add_weight(mean_features)
-                pass
-            else:
-                self.vision_clsf.set_weight(mean_features)
-                pass
-            optimizer = torch.optim.Adam(self.vision_clsf.parameters(), lr=cfg.visual_clsf_lr)
-            scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, e_num*len(vision_clsf_loader), eta_min=cfg.visual_clsf_lr*0.01)
-            # total_vc_batches = e_num * len(vision_clsf_loader)
+        # if cfg.visual_clsf:
+        #     # pdb.set_trace()
+        #     torch.cuda.empty_cache()
+        #     self.model.eval()
+        #     e_num = cfg.visual_clsf_epochs
+        #     vision_clsf_loader = DataLoader(
+        #         train_dataset[task_id:task_id + 1],
+        #         batch_size=self.visual_clsf_batch_size,
+        #         shuffle=True,
+        #         num_workers=2,
+        #     )
+        #     features_dict = {}
+        #     with torch.no_grad():
+        #         for inputs, targets, t in tqdm(vision_clsf_loader):
+        #             inputs, targets = inputs.to(self.device), targets.to(self.device)
+        #             _, features, __ = self.forward_for_extra_visual_clsf(inputs, test=True, return_feature=True)
+        #             for feature, target in zip(features, targets):
+        #                 target = target.item()
+        #                 if target not in features_dict:
+        #                     features_dict[target] = []
+        #                 features_dict[target].append(feature.cpu())
+        #     mean_features = []
+        #     for target in sorted(features_dict.keys()):
+        #         features = torch.stack(features_dict[target])
+        #         mean_feature = features.mean(dim=0)
+        #         mean_features.append(mean_feature.unsqueeze(0))
+        #     mean_features = torch.cat(mean_features).to(self.device)
+        #     if task_id > 0:
+        #         self.vision_clsf.add_weight(mean_features)
+        #         pass
+        #     else:
+        #         self.vision_clsf.set_weight(mean_features)
+        #         pass
+        #     optimizer = torch.optim.Adam(self.vision_clsf.parameters(), lr=cfg.visual_clsf_lr)
+        #     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, e_num*len(vision_clsf_loader), eta_min=cfg.visual_clsf_lr*0.01)
+        #     # total_vc_batches = e_num * len(vision_clsf_loader)
             
-            for e in range(e_num):
-                bach_i = -1
-                for inputs, targets, t in vision_clsf_loader:
-                    inputs, targets = inputs.to(self.device), targets.to(self.device)
-                    # pdb.set_trace()
-                    with torch.no_grad():
-                        outputs, _ = self.forward_for_extra_visual_clsf(inputs, return_feature=True)
-                    # pdb.set_trace()
-                    outputs = self.vision_clsf(outputs)
-                    # pdb.set_trace()
-                    loss = intra_cls(outputs,targets, targets_bais).mean()
-                    # loss = F.cross_entropy(outputs, targets)
-                    optimizer.zero_grad()
-                    loss.backward()
-                    optimizer.step()
-                    bach_i+=1
-                    if bach_i % 10 == 0:
-                        logging.info(f"Epoch {e + 1}/{e_num} | Batch {bach_i + 1}/{len(vision_clsf_loader)} | Loss: {loss.item()}")
-                    scheduler.step()
+        #     for e in range(e_num):
+        #         bach_i = -1
+        #         for inputs, targets, t in vision_clsf_loader:
+        #             inputs, targets = inputs.to(self.device), targets.to(self.device)
+        #             # pdb.set_trace()
+        #             with torch.no_grad():
+        #                 outputs, _ = self.forward_for_extra_visual_clsf(inputs, return_feature=True)
+        #             # pdb.set_trace()
+        #             outputs = self.vision_clsf(outputs)
+        #             # pdb.set_trace()
+        #             loss = intra_cls(outputs,targets, targets_bais).mean()
+        #             # loss = F.cross_entropy(outputs, targets)
+        #             optimizer.zero_grad()
+        #             loss.backward()
+        #             optimizer.step()
+        #             bach_i+=1
+        #             if bach_i % 10 == 0:
+        #                 logging.info(f"Epoch {e + 1}/{e_num} | Batch {bach_i + 1}/{len(vision_clsf_loader)} | Loss: {loss.item()}")
+        #             scheduler.step()
         #======================================================================================
         train_loader_ = DataLoader(train_dataset[task_id:task_id + 1],
                                   batch_size=128,
