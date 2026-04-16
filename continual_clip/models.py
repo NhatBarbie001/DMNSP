@@ -70,10 +70,10 @@ class ClassIncremental(nn.Module):
         self.visual_clsf_epochs = cfg.visual_clsf_epochs
         self.visual_clsf_batch_size = cfg.visual_clsf_batch_size
         self.vision_clsf = None
-        if cfg.model_name == "ViT-L/14":
-            self.vision_clsf = VisionClassifier(768, cfg.increment, activation=None)
-        else:
-            self.vision_clsf = VisionClassifier(512, cfg.increment, activation=None)
+        # if cfg.model_name == "ViT-L/14":
+        #     self.vision_clsf = VisionClassifier(768, cfg.increment, activation=None)
+        # else:
+        #     self.vision_clsf = VisionClassifier(512, cfg.increment, activation=None)
 
 
     def forward(self, image, taskid):
