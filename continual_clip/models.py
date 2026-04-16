@@ -24,8 +24,8 @@ def intra_cls(logits, y, classes):
 class VisionClassifier(nn.Module):
     def __init__(self, in_features, num_classes, weight_init=None, activation=None):
         super().__init__()
-        self.fc = nn.Linear(in_features, num_classes, bias=False)
-        self.fc = nn.Parameter(self.fc.weight.data)
+        # self.fc = nn.Linear(in_features, num_classes, bias=False)
+        # self.fc = nn.Parameter(self.fc.weight.data)
         # if weight_init is not None:
         #     self.fc.data = weight_init
         # if activation is not None:
