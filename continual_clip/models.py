@@ -72,15 +72,16 @@ class ClassIncremental(nn.Module):
         self.visual_clsf_batch_size = cfg.visual_clsf_batch_size
         self.vision_clsf = None
         if(cfg.visual_clsf):
-            torch.manual_seed(2911)
-            torch.cuda.manual_seed(2911)
-            torch.cuda.manual_seed_all(2911)
+            with torch.random.fork_rng(devices=[0]):
+                torch.manual_seed(2911)
+                torch.cuda.manual_seed(2911)
+                torch.cuda.manual_seed_all(2911)
 
-            if cfg.model_name == "ViT-L/14":
-                self.vision_clsf = VisionClassifier(768, cfg.increment, activation=None)
-            else:
-                self.vision_clsf = VisionClassifier(512, cfg.increment, activation=None)
-        # # reset seed sau khi khởi tạo VisionClassifier
+                if cfg.model_name == "ViT-L/14":
+                    self.vision_clsf = VisionClassifier(768, cfg.increment, activation=None)
+                else:
+                    self.vision_clsf = VisionClassifier(512, cfg.increment, activation=None)
+        # reset seed sau khi khởi tạo VisionClassifier
         # torch.manual_seed(32)
         # torch.cuda.manual_seed(32)
         # torch.cuda.manual_seed_all(32)
@@ -289,12 +290,17 @@ class ClassIncremental(nn.Module):
             torch.cuda.empty_cache()
             self.model.eval()
             e_num = cfg.visual_clsf_epochs
+            vc_gen = torch.Generator()
+            vc_gen.manual_seed(2911 + task_id)
+
             vision_clsf_loader = DataLoader(
                 train_dataset[task_id:task_id + 1],
                 batch_size=self.visual_clsf_batch_size,
                 shuffle=True,
                 num_workers=2,
+                generator=vc_gen,
             )
+
             features_dict = {}
             with torch.no_grad():
                 for inputs, targets, t in tqdm(vision_clsf_loader):
