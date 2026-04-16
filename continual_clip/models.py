@@ -72,6 +72,10 @@ class ClassIncremental(nn.Module):
         self.visual_clsf_batch_size = cfg.visual_clsf_batch_size
         self.vision_clsf = None
         if(cfg.visual_clsf):
+            torch.manual_seed(2911)
+            torch.cuda.manual_seed(2911)
+            torch.cuda.manual_seed_all(2911)
+
             if cfg.model_name == "ViT-L/14":
                 self.vision_clsf = VisionClassifier(768, cfg.increment, activation=None)
             else:
