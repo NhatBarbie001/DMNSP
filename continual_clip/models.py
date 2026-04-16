@@ -26,12 +26,12 @@ class VisionClassifier(nn.Module):
         super().__init__()
         self.fc = nn.Linear(in_features, num_classes, bias=False)
         self.fc = nn.Parameter(self.fc.weight.data)
-        if weight_init is not None:
-            self.fc.data = weight_init
-        if activation is not None:
-            self.activation = activation
-        else:
-            self.activation = nn.Identity()
+        # if weight_init is not None:
+        #     self.fc.data = weight_init
+        # if activation is not None:
+        #     self.activation = activation
+        # else:
+        #     self.activation = nn.Identity()
     
     # def add_weight(self, weight):
     #     self.fc = nn.Parameter(torch.cat([self.fc, weight], dim=0))
