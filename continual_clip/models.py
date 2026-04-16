@@ -23,8 +23,7 @@ def intra_cls(logits, y, classes):
     return F.cross_entropy(logits1, y, reduction='none')
 class VisionClassifier(nn.Module):
     def __init__(self, in_features, num_classes, weight_init=None, activation=None):
-        ok = False 
-        #  super().__init__()
+        super().__init__()
         # self.fc = nn.Linear(in_features, num_classes, bias=False)
         # self.fc = nn.Parameter(self.fc.weight.data)
         # if weight_init is not None:
