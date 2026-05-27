@@ -13,9 +13,9 @@ def get_delay(line):
     if "UserWarning" in line or "warnings.warn" in line:
         return 0.1
     if line.startswith("positive") or line.startswith("negative"):
-        return 10
+        return 1
     if line.startswith("Epoch"):
-        return 10                      # mô phỏng thời gian train mỗi batch
+        return 1                   # mô phỏng thời gian train mỗi batch
     return 0.2
 
 def simulate(log_file):
