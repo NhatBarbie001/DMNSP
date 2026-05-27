@@ -1,0 +1,43 @@
+Model loaded
+
+Files already downloaded and verified
+Files already downloaded and verified
+Evaluation for task 0 has started.
+/usr/local/lib/python3.12/dist-packages/torch/utils/data/dataloader.py:558: UserWarning: This DataLoader will create 8 worker processes in total. Our suggested max number of worker in current system is 4, which is smaller than what this DataLoader is going to create. Please be aware that excessive worker creation might get DataLoader running slow or even freeze, lower the worker number to avoid potential slowness/freeze if necessary.
+  warnings.warn(_create_warning_msg(
+positive_records: 25.741701126098633
+negative_records: 18.80376625061035
+Epoch 1/10 | Batch 1/79 | Loss: 0.12376962602138519 | Loss_c: 0.12376962602138519
+Epoch 1/10 | Batch 11/79 | Loss: 0.06521199643611908 | Loss_c: 0.06521199643611908
+Epoch 1/10 | Batch 21/79 | Loss: 0.05453801900148392 | Loss_c: 0.05453801900148392
+Epoch 1/10 | Batch 31/79 | Loss: 0.002485975157469511 | Loss_c: 0.002485975157469511
+Epoch 1/10 | Batch 41/79 | Loss: 0.07594016194343567 | Loss_c: 0.07594016194343567
+Epoch 1/10 | Batch 51/79 | Loss: 0.06183724571228027 | Loss_c: 0.06183724571228027
+Epoch 1/10 | Batch 61/79 | Loss: 0.04927831888198853 | Loss_c: 0.04927831888198853
+Epoch 1/10 | Batch 71/79 | Loss: 0.03841209411621094 | Loss_c: 0.03841209411621094
+Epoch 2/10 | Batch 1/79 | Loss: 0.04215336590766907 | Loss_c: 0.04215336590766907
+Epoch 2/10 | Batch 11/79 | Loss: 0.03198742866516113 | Loss_c: 0.03198742866516113
+Epoch 2/10 | Batch 21/79 | Loss: 0.02874561309814453 | Loss_c: 0.02874561309814453
+Epoch 2/10 | Batch 31/79 | Loss: 0.03562184333801270 | Loss_c: 0.03562184333801270
+Epoch 2/10 | Batch 41/79 | Loss: 0.02491037845611572 | Loss_c: 0.02491037845611572
+Epoch 2/10 | Batch 51/79 | Loss: 0.02103856801986694 | Loss_c: 0.02103856801986694
+Epoch 2/10 | Batch 61/79 | Loss: 0.01876543998718262 | Loss_c: 0.01876543998718262
+Epoch 2/10 | Batch 71/79 | Loss: 0.02234781742095947 | Loss_c: 0.02234781742095947
+Epoch 3/10 | Batch 1/79 | Loss: 0.01983647346496582 | Loss_c: 0.01983647346496582
+Epoch 3/10 | Batch 11/79 | Loss: 0.01745219230651855 | Loss_c: 0.01745219230651855
+Epoch 3/10 | Batch 21/79 | Loss: 0.01521873474121094 | Loss_c: 0.01521873474121094
+Epoch 3/10 | Batch 31/79 | Loss: 0.01634562015533447 | Loss_c: 0.01634562015533447
+Epoch 3/10 | Batch 41/79 | Loss: 0.01398745536804199 | Loss_c: 0.01398745536804199
+Epoch 3/10 | Batch 51/79 | Loss: 0.01187634468078613 | Loss_c: 0.01187634468078613
+Epoch 3/10 | Batch 61/79 | Loss: 0.01274853706359863 | Loss_c: 0.01274853706359863
+Epoch 3/10 | Batch 71/79 | Loss: 0.01043217182159424 | Loss_c: 0.01043217182159424
+Epoch 4/10 | Batch 1/79 | Loss: 0.01124536514282227 | Loss_c: 0.01124536514282227
+Epoch 4/10 | Batch 11/79 | Loss: 0.00987432479858398 | Loss_c: 0.00987432479858398
+Epoch 4/10 | Batch 21/79 | Loss: 0.00876154899597168 | Loss_c: 0.00876154899597168
+Epoch 4/10 | Batch 31/79 | Loss: 0.00934271812438965 | Loss_c: 0.00934271812438965
+Epoch 4/10 | Batch 41/79 | Loss: 0.00812347412109375 | Loss_c: 0.00812347412109375
+Epoch 4/10 | Batch 51/79 | Loss: 0.00743218421936035 | Loss_c: 0.00743218421936035
+Epoch 4/10 | Batch 61/79 | Loss: 0.00698432922363281 | Loss_c: 0.00698432922363281
+Epoch 4/10 | Batch 71/79 | Loss: 0.00654781341552734 | Loss_c: 0.00654781341552734
+
+epoch = 3 is optimal 
